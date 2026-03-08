@@ -133,7 +133,7 @@ const config: Config = {
     openRouterBaseUrl: "https://openrouter.ai/api/v1",
     platformApiKey: secrets.openrouter_api_key || process.env.OPENROUTER_KEY || "",
     maxMovesPerMatch: 200,
-    robotMaxPerUser: 3,
+    robotMaxPerUser: 5,
     maxMatchesPerRobotPerDay: 30,
   },
   encryptionSalt: secrets.encryption_salt || "openrace",

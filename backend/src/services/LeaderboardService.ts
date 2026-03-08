@@ -68,7 +68,7 @@ export class LeaderboardService {
       `SELECT r.id, r.elo, r.wins, r.losses, r.draws
        FROM robots r
        JOIN matches m ON (m.robot_white_id = r.id OR m.robot_black_id = r.id)
-       WHERE m.season_id = ?
+       WHERE m.season_id = ? AND r.removed = 0
        GROUP BY r.id
        ORDER BY r.elo DESC`,
       [seasonId]
@@ -117,7 +117,7 @@ export class LeaderboardService {
         NOW() as snapshotted_at
        FROM robots r
        JOIN users u ON u.id = r.user_id
-       WHERE (r.wins + r.losses + r.draws) > 0
+       WHERE (r.wins + r.losses + r.draws) > 0 AND r.removed = 0
        ORDER BY r.points DESC, r.elo DESC
        LIMIT 100`,
       []
@@ -143,6 +143,7 @@ export class LeaderboardService {
        JOIN users u ON u.id = r.user_id
        LEFT JOIN matches m ON (m.robot_white_id = r.id OR m.robot_black_id = r.id OR m.robot_third_id = r.id)
          AND m.created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+       WHERE r.removed = 0
        GROUP BY r.id
        HAVING (wins + losses + draws) > 0
        ORDER BY points DESC, r.elo DESC
@@ -170,6 +171,7 @@ export class LeaderboardService {
        JOIN users u ON u.id = r.user_id
        LEFT JOIN matches m ON (m.robot_white_id = r.id OR m.robot_black_id = r.id OR m.robot_third_id = r.id)
          AND DATE(m.created_at) = CURDATE()
+       WHERE r.removed = 0
        GROUP BY r.id
        HAVING (wins + losses + draws) > 0
        ORDER BY points DESC, r.elo DESC

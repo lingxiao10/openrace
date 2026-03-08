@@ -102,11 +102,18 @@ export class AppLogic {
   }
 
   static async onCreateRobot(form: HTMLFormElement): Promise<void> {
+    EventTool.emit("robot_create_start");
     await Comm.post(
       "/api/robot",
       AppLogic.formToObject(form),
-      AppLogic.handleRobotCreated,
-      AppLogic.handleApiError
+      (res) => {
+        AppLogic.handleRobotCreated(res);
+        EventTool.emit("robot_create_success");
+      },
+      (res) => {
+        AppLogic.handleApiError(res);
+        EventTool.emit("robot_create_error");
+      }
     );
   }
 
@@ -277,12 +284,10 @@ export class AppLogic {
   }
 
   private static handleRobotCreated(_res: unknown): void {
-    Toast.success(Trans.t("robot.created", "Robot created"));
     AppLogic.loadRobots();
   }
 
   private static handleRobotDeleted(_res: unknown): void {
-    Toast.success(Trans.t("robot.deleted", "Robot deleted"));
     AppLogic.loadRobots();
   }
 
@@ -291,7 +296,6 @@ export class AppLogic {
   }
 
   private static handleRobotActivated(_res: unknown): void {
-    Toast.success(Trans.t("robot.activated", "Robot activated"));
     AppLogic.loadRobots();
   }
 
@@ -332,7 +336,6 @@ export class AppLogic {
   }
 
   private static handleSettingsSaved(_res: unknown): void {
-    Toast.success(Trans.t("settings.saved", "Settings saved"));
     AppLogic.loadSettings();
   }
 

@@ -120,6 +120,7 @@ export class AppLogic {
   static async handleGetRobots(req: Request): Promise<StandardResponse<unknown>> {
     if (!AppLogic.extractUserId(req)) return Response.unauthorized();
     const robots = await RobotService.findByUser(AppLogic.extractUserId(req)!);
+    const busyRobotIds = await MatchService.getBusyRobotIds();
 
     // Add today's match count for each robot, remove encrypted API key
     const robotsWithStats = await Promise.all(
@@ -129,6 +130,7 @@ export class AppLogic {
           ...robotData,
           today_matches: await RobotService.getTodayMatchCount(robot.id),
           max_daily_matches: config.game.maxMatchesPerRobotPerDay,
+          in_game: busyRobotIds.has(robot.id),
         };
       })
     );
@@ -332,6 +334,7 @@ export class AppLogic {
       supported_langs: config.app.supportedLangs,
       available_models: config.game.availableModels,
       default_model: config.game.defaultModel,
+      robot_max_per_user: config.game.robotMaxPerUser,
     };
   }
 
@@ -344,6 +347,7 @@ export class AppLogic {
       available_models: config.game.availableModels,
       default_model: config.game.defaultModel,
       initial_balance: config.game.initialBalance,
+      robot_max_per_user: config.game.robotMaxPerUser,
     };
   }
 

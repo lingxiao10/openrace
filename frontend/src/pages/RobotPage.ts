@@ -6,26 +6,37 @@ import { AppLogic } from "../AppLogic";
 import { Trans } from "../core/Trans";
 import { Config } from "../core/Config";
 import { EventTool } from "../tools/EventTool";
+import { Toast } from "../ui/Toast";
 
 const DEFAULT_STRATEGY = `Play solid, principled chess. Control the center with pawns. Develop knights before bishops. Castle early for king safety. Avoid moving the same piece twice in the opening. Look for tactical opportunities but prioritize positional play.`;
 
 export class RobotPage {
   private container!: HTMLElement;
+  private robotCount: number = 0;
 
   mount(container: HTMLElement): void {
     this.container = container;
     this.container.innerHTML = this.renderSkeleton();
     this.populateProviders();
+
     AppLogic.loadRobots();
     EventTool.on("robots_loaded", (data) => this.renderRobots(data as Array<Record<string, unknown>>));
     this.bindCreateForm();
+    this.bindEvents();
 
     // Listen for trigger from HomePage
-    document.addEventListener("trigger_create_robot", () => {
-      const modal = document.getElementById("create-robot-modal");
-      if (modal) modal.classList.remove("hidden");
-    });
+    EventTool.on("trigger_create_robot", this.handleTriggerCreate);
   }
+
+  private handleTriggerCreate = (): void => {
+    const maxRobots = (Config.get("robot_max_per_user") as number) || 3;
+    if (this.robotCount >= maxRobots) {
+      Toast.error(Trans.t("robot.limit_reached", "Reached maximum robot limit."));
+      return;
+    }
+    const modal = document.getElementById("create-robot-modal");
+    if (modal) modal.classList.remove("hidden");
+  };
 
   private populateProviders(): void {
     const providers = (window as any).__sync_providers as Array<{ id: string; name: string; models: Array<{ id: string; name: string }>; topUpUrl?: string }> | undefined;
@@ -65,6 +76,7 @@ export class RobotPage {
         baseUrlInput.setAttribute("required", "required");
         // For OpenAI Compatible, directly show custom model input
         modelSelect.style.display = "none";
+        modelSelect.removeAttribute("required");
         customModelInput.style.display = "block";
         customModelInput.setAttribute("required", "required");
         customModelInput.placeholder = Trans.t("robot.model_name_placeholder", "Enter model name (e.g., gpt-4)");
@@ -75,6 +87,7 @@ export class RobotPage {
         baseUrlInput.removeAttribute("required");
         baseUrlInput.value = "";
         modelSelect.style.display = "block";
+        modelSelect.setAttribute("required", "required");
       }
 
       if (selectedProvider) {
@@ -118,6 +131,7 @@ export class RobotPage {
 
   unmount(): void {
     EventTool.clear("robots_loaded");
+    EventTool.clear("trigger_create_robot");
   }
 
   private renderSkeleton(): string {
@@ -189,7 +203,7 @@ export class RobotPage {
           ${Trans.t("robot.use_default", "Use Default Strategy")}
         </button>
       </div>
-      <button type="submit" class="btn btn-primary btn-full">${Trans.t("robot.create_btn", "Create Robot")}</button>
+      <button type="submit" id="create-robot-submit" class="btn btn-primary btn-full">${Trans.t("robot.create_btn", "Create Robot")}</button>
     </form>
   </div>
 </div>`;
@@ -198,6 +212,12 @@ export class RobotPage {
   private bindCreateForm(): void {
     // Open modal
     this.container.querySelector("#open-create-modal")?.addEventListener("click", () => {
+      const maxRobots = (Config.get("robot_max_per_user") as number) || 3;
+      if (this.robotCount >= maxRobots) {
+        Toast.error(Trans.t("robot.limit_reached", "Reached maximum robot limit."));
+        return;
+      }
+
       const modal = document.getElementById("create-robot-modal");
       if (modal) modal.classList.remove("hidden");
 
@@ -241,9 +261,10 @@ export class RobotPage {
       const form = e.target as HTMLFormElement;
       const modelSelect = document.getElementById("model-select") as HTMLSelectElement;
       const customModelInput = document.getElementById("custom-model-input") as HTMLInputElement;
+      const providerSelect = document.getElementById("provider-select") as HTMLSelectElement;
 
       // If custom model is selected, use the custom input value
-      if (modelSelect.value === "__custom__" && customModelInput.value.trim()) {
+      if ((modelSelect.value === "__custom__" || providerSelect.value === "openai-compatible") && customModelInput.value.trim()) {
         const modelInput = form.querySelector<HTMLSelectElement>('select[name="model"]');
         if (modelInput) {
           // Temporarily set the value to the custom model name
@@ -255,10 +276,6 @@ export class RobotPage {
       }
 
       AppLogic.onCreateRobot(form);
-      closeModal();
-      // Reset form
-      form.reset();
-      customModelInput.style.display = "none";
     });
 
     document.querySelector("#use-default-strategy")?.addEventListener("click", () => {
@@ -267,7 +284,41 @@ export class RobotPage {
     });
   }
 
+  private bindEvents(): void {
+    const btn = document.getElementById("create-robot-submit") as HTMLButtonElement;
+    const form = document.getElementById("create-robot-form") as HTMLFormElement;
+    const customModelInput = document.getElementById("custom-model-input") as HTMLInputElement;
+
+    EventTool.on("robot_create_start", () => {
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<span class="loading-spinner"></span> ${Trans.t("robot.creating", "Creating...")}`;
+      }
+    });
+
+    EventTool.on("robot_create_success", () => {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = Trans.t("robot.create_btn", "Create Robot");
+      }
+      // Success: close and reset
+      const modal = document.getElementById("create-robot-modal");
+      if (modal) modal.classList.add("hidden");
+      if (form) form.reset();
+      if (customModelInput) customModelInput.style.display = "none";
+    });
+
+    EventTool.on("robot_create_error", () => {
+      if (btn) {
+        btn.disabled = false;
+        btn.textContent = Trans.t("robot.create_btn", "Create Robot");
+      }
+      // Error: keep modal open
+    });
+  }
+
   private renderRobots(robots: Array<Record<string, unknown>>): void {
+    this.robotCount = robots.length;
     const el = this.container.querySelector("#robot-list");
     if (!el) return;
     if (!robots.length) {
@@ -285,6 +336,7 @@ export class RobotPage {
 
   private renderRobotCard(r: Record<string, unknown>): string {
     const suspended = r.status === "suspended";
+    const inGame = r.in_game as boolean;
     const gameType = r.game_type as string;
     const gameIcon = gameType === "doudizhu" ? "🃏" : "♟";
     const gameLabel = gameType === "doudizhu" ? Trans.t("robot.doudizhu", "斗地主") : Trans.t("robot.chess", "国际象棋");
@@ -292,6 +344,19 @@ export class RobotPage {
     const maxDailyMatches = r.max_daily_matches as number || 30;
     const errorCount = r.error_count as number || 0;
     const provider = r.provider as string || "unknown";
+
+    let statusText = "";
+    let statusClass = "";
+    if (suspended) {
+      statusText = Trans.t("robot.status_stopped", "已暂停");
+      statusClass = "status-text-stopped";
+    } else if (inGame) {
+      statusText = Trans.t("robot.status_in_game", "对局中");
+      statusClass = "status-text-ingame";
+    } else {
+      statusText = Trans.t("robot.status_waiting", "已启用，正在等待对局匹配");
+      statusClass = "status-text-waiting";
+    }
 
     return `
 <div class="robot-card-new ${suspended ? 'robot-suspended' : ''}" data-id="${r.id}">
@@ -337,17 +402,18 @@ export class RobotPage {
     </div>
 
     ${r.strategy ? `<div class="robot-strategy-preview">"${(r.strategy as string).slice(0, 80)}${(r.strategy as string).length > 80 ? '...' : ''}"</div>` : ''}
+    <div class="robot-status-row ${statusClass}">${statusText}</div>
   </div>
 
   <div class="robot-card-footer">
     ${suspended
-      ? `<button class="btn-card btn-card-primary activate-btn" data-id="${r.id}">
+        ? `<button class="btn-card btn-card-primary activate-btn" data-id="${r.id}">
           <span>▶</span> ${Trans.t("robot.activate", "启用")}
         </button>`
-      : `<button class="btn-card btn-card-secondary suspend-btn" data-id="${r.id}">
+        : `<button class="btn-card btn-card-secondary suspend-btn" data-id="${r.id}">
           <span>⏸</span> ${Trans.t("robot.suspend", "暂停")}
         </button>`
-    }
+      }
     <button class="btn-card btn-card-danger delete-btn" data-id="${r.id}">
       <span>🗑</span> ${Trans.t("robot.delete", "删除")}
     </button>

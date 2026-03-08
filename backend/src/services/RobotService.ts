@@ -26,13 +26,14 @@ export interface RobotRow extends RowDataPacket {
   api_key_encrypted: string | null;
   base_url: string | null;
   error_count: number;
+  removed: number;
   created_at: string;
 }
 
 export class RobotService {
   static async checkNameExists(name: string): Promise<boolean> {
     const rows = await DbTool.query<RobotRow>(
-      "SELECT id FROM robots WHERE name = ? LIMIT 1",
+      "SELECT id FROM robots WHERE name = ? AND removed = 0 LIMIT 1",
       [name]
     );
     return rows.length > 0;
@@ -58,14 +59,14 @@ export class RobotService {
 
   static async findByUser(userId: number): Promise<RobotRow[]> {
     return DbTool.query<RobotRow>(
-      "SELECT * FROM robots WHERE user_id = ? ORDER BY created_at DESC",
+      "SELECT * FROM robots WHERE user_id = ? AND removed = 0 ORDER BY created_at DESC",
       [userId]
     );
   }
 
   static async findById(id: number): Promise<RobotRow | null> {
     const rows = await DbTool.query<RobotRow>(
-      "SELECT * FROM robots WHERE id = ? LIMIT 1",
+      "SELECT * FROM robots WHERE id = ? AND removed = 0 LIMIT 1",
       [id]
     );
     return rows[0] ?? null;
@@ -94,7 +95,7 @@ export class RobotService {
 
   static async delete(id: number, userId: number): Promise<boolean> {
     const result = await DbTool.execute(
-      "DELETE FROM robots WHERE id = ? AND user_id = ?",
+      "UPDATE robots SET removed = 1 WHERE id = ? AND user_id = ?",
       [id, userId]
     );
     return result.affectedRows > 0;
@@ -146,21 +147,21 @@ export class RobotService {
 
   static async getActiveRobots(): Promise<RobotRow[]> {
     return DbTool.query<RobotRow>(
-      "SELECT * FROM robots WHERE status = 'active'",
+      "SELECT * FROM robots WHERE status = 'active' AND removed = 0",
       []
     );
   }
 
   static async getActiveRobotsByGameType(gameType: "chess" | "doudizhu"): Promise<RobotRow[]> {
     return DbTool.query<RobotRow>(
-      "SELECT * FROM robots WHERE status = 'active' AND game_type = ?",
+      "SELECT * FROM robots WHERE status = 'active' AND removed = 0 AND game_type = ?",
       [gameType]
     );
   }
 
   static async countByUser(userId: number): Promise<number> {
     const rows = await DbTool.query<RowDataPacket & { cnt: number }>(
-      "SELECT COUNT(*) as cnt FROM robots WHERE user_id = ?",
+      "SELECT COUNT(*) as cnt FROM robots WHERE user_id = ? AND removed = 0",
       [userId]
     );
     return rows[0]?.cnt ?? 0;
@@ -172,14 +173,14 @@ export class RobotService {
 
   static async countAll(): Promise<number> {
     const rows = await DbTool.query<RowDataPacket & { cnt: number }>(
-      "SELECT COUNT(*) as cnt FROM robots", []
+      "SELECT COUNT(*) as cnt FROM robots WHERE removed = 0", []
     );
     return rows[0]?.cnt ?? 0;
   }
 
   static async countActive(): Promise<number> {
     const rows = await DbTool.query<RowDataPacket & { cnt: number }>(
-      "SELECT COUNT(*) as cnt FROM robots WHERE status = 'active'", []
+      "SELECT COUNT(*) as cnt FROM robots WHERE status = 'active' AND removed = 0", []
     );
     return rows[0]?.cnt ?? 0;
   }
@@ -190,19 +191,28 @@ export class RobotService {
          SELECT robot_white_id as rid FROM matches WHERE status = 'running'
          UNION
          SELECT robot_black_id FROM matches WHERE status = 'running'
+         UNION
+         SELECT robot_third_id FROM matches WHERE status = 'running' AND robot_third_id IS NOT NULL
        ) t`,
       []
     );
     return rows[0]?.cnt ?? 0;
   }
 
-  /** Robots that are active AND user balance > 0 (truly matchmaking-eligible) */
   static async countEligible(): Promise<number> {
+    const { PROVIDERS } = await import("../config/providers");
+    const noKeyProviders = PROVIDERS.filter(p => !p.requiresApiKey).map(p => `'${p.id}'`);
+
+    let keyCheck = `(r.api_key_encrypted IS NOT NULL AND TRIM(r.api_key_encrypted) != '')`;
+    if (noKeyProviders.length > 0) {
+      keyCheck = `(${keyCheck} OR r.provider IN (${noKeyProviders.join(",")}))`;
+    }
+
     const rows = await DbTool.query<RowDataPacket & { cnt: number }>(
       `SELECT COUNT(DISTINCT r.id) as cnt
        FROM robots r
        INNER JOIN users u ON u.id = r.user_id
-       WHERE r.status = 'active' AND u.balance > 0`,
+       WHERE r.status = 'active' AND r.removed = 0 AND ${keyCheck}`,
       []
     );
     return rows[0]?.cnt ?? 0;

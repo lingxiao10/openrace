@@ -42,22 +42,17 @@ window.addEventListener("DOMContentLoaded", async () => {
   }
 
   // Register routes
-  Router.register("/",                () => new GameCenterPage());
-  Router.register("/login",           () => new LoginPage());
-  Router.register("/register",        () => new RegisterPage());
+  Router.register("/", () => new GameCenterPage());
+  Router.register("/login", () => new LoginPage());
+  Router.register("/register", () => new RegisterPage());
   Router.register("/running-matches", () => new RunningMatchesPage());
-  Router.register("/dashboard",       () => new DashboardPage(), true);
-  Router.register("/robots",          () => new RobotPage(), true);
-  Router.register("/match/:id",       () => new GamePage());
-  Router.register("/leaderboard",     () => new LeaderboardPage());
-  Router.register("/history",         () => new HistoryPage(), true);
-  Router.register("/settings",        () => new SettingsPage(), true);
-  Router.register("/logs",            () => new LogPage(), true);
-
-  // Default redirect
-  if (!requireAuth() && !["#/login", "#/register", "#/"].includes(window.location.hash)) {
-    Router.navigate("/");
-  }
+  Router.register("/dashboard", () => new DashboardPage(), true);
+  Router.register("/robots", () => new RobotPage(), true);
+  Router.register("/match/:id", () => new GamePage());
+  Router.register("/leaderboard", () => new LeaderboardPage());
+  Router.register("/history", () => new HistoryPage(), true);
+  Router.register("/settings", () => new SettingsPage(), true);
+  Router.register("/logs", () => new LogPage(), true);
 
   Router.init("app");
 

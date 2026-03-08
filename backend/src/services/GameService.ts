@@ -23,6 +23,7 @@ interface TickRecord {
 export class GameService {
   private static readonly MAX_TICKS = 30;
   private static readonly _ticks: TickRecord[] = [];
+  private static readonly _processingMatches = new Set<number>();
 
   static getTicks(): TickRecord[] {
     return [...GameService._ticks];
@@ -128,30 +129,40 @@ export class GameService {
 
   /** Execute a single match from start to finish */
   static async runMatch(matchId: number): Promise<void> {
+    if (GameService._processingMatches.has(matchId)) {
+      LogCenter.debug("GameService", `Match ${matchId} is already being processed, skipping.`);
+      return;
+    }
+
     const match = await MatchService.getMatch(matchId);
     if (!match) return;
 
-    // Only start if not already running
-    if (match.status === "pending") {
-      await MatchService.startMatch(matchId);
-    }
+    GameService._processingMatches.add(matchId);
+    try {
+      // Only start if not already running
+      if (match.status === "pending") {
+        await MatchService.startMatch(matchId);
+      }
 
-    if (match.game_type === "chess") {
-      const white = await RobotService.findById(match.robot_white_id);
-      const black = await RobotService.findById(match.robot_black_id);
-      if (!white || !black) return;
+      if (match.game_type === "chess") {
+        const white = await RobotService.findById(match.robot_white_id);
+        const black = await RobotService.findById(match.robot_black_id);
+        if (!white || !black) return;
 
-      // 解密API密钥
-      const whiteKey = white.api_key_encrypted ? EncryptTool.decrypt(white.api_key_encrypted) : "";
-      const blackKey = black.api_key_encrypted ? EncryptTool.decrypt(black.api_key_encrypted) : "";
+        // 解密API密钥
+        const whiteKey = white.api_key_encrypted ? EncryptTool.decrypt(white.api_key_encrypted) : "";
+        const blackKey = black.api_key_encrypted ? EncryptTool.decrypt(black.api_key_encrypted) : "";
 
-      await GameService.playChessGame(matchId, white, black, whiteKey, blackKey);
-    } else if (match.game_type === "doudizhu") {
-      const player1 = await RobotService.findById(match.robot_white_id);
-      const player2 = await RobotService.findById(match.robot_black_id);
-      const player3 = await RobotService.findById(match.robot_third_id!);
-      if (!player1 || !player2 || !player3) return;
-      await GameService.playDoudizhuGame(matchId, player1, player2, player3, match.robot_landlord_id!);
+        await GameService.playChessGame(matchId, white, black, whiteKey, blackKey);
+      } else if (match.game_type === "doudizhu") {
+        const player1 = await RobotService.findById(match.robot_white_id);
+        const player2 = await RobotService.findById(match.robot_black_id);
+        const player3 = await RobotService.findById(match.robot_third_id!);
+        if (!player1 || !player2 || !player3) return;
+        await GameService.playDoudizhuGame(matchId, player1, player2, player3, match.robot_landlord_id!);
+      }
+    } finally {
+      GameService._processingMatches.delete(matchId);
     }
   }
 
@@ -244,7 +255,7 @@ export class GameService {
 
       // If all 12 attempts failed, forfeit
       if (!move || !aiResult) {
-        MatchLogTool.logForfeit(logPath, robot.id, robot.name, `Failed to produce legal move after 12 attempts. Last error: ${lastError}`);
+        MatchLogTool.logForfeit(logPath, robot.id, robot.name, `Forfeit Reason:\nFailed to produce legal move after 12 attempts. Last error: ${lastError}`);
 
         // 增加错误计数并检查是否需要暂停
         const errorCount = await RobotService.incrementErrorCount(robot.id);
@@ -254,7 +265,7 @@ export class GameService {
 
         await GameService.forfeitRobot(
           matchId, robot, isWhiteTurn ? black : white,
-          `Failed to produce legal move after 12 attempts. Last error: ${lastError}`
+          `Forfeit Reason:\nFailed to produce legal move after 12 attempts. Last error: ${lastError}`
         );
         return;
       }
@@ -270,13 +281,7 @@ export class GameService {
       }
 
       const cost = aiResult.costUsd * (1 + config.game.aiCostMarkupPercent / 100);
-      const paid = await BalanceService.deduct(robot.user_id, cost, "chess_move", matchId);
-
-      if (!paid) {
-        MatchLogTool.logForfeit(logPath, robot.id, robot.name, "Insufficient balance");
-        await GameService.forfeitInsufficientBalance(matchId, robot, isWhiteTurn ? black : white);
-        return;
-      }
+      // Removed BalanceService.deduct - users use their own API keys
 
       await MatchService.recordMove(matchId, moveNum, robot.id, move, newFen, aiResult.totalTokens, cost);
       MatchLogTool.logMove(logPath, moveNum, robot.id, robot.name, move, aiResult.totalTokens, cost, newFen);
@@ -427,19 +432,13 @@ export class GameService {
           players,
           landlordIdx,
           state.currentPlayerIdx,
-          `Failed to produce valid play after 12 attempts. Last error: ${lastError}`
+          `Forfeit Reason:\nFailed to produce valid play after 12 attempts. Last error: ${lastError}`
         );
         return;
       }
 
-      // Deduct cost
+      // Deduct cost (information only, no actual deduction from internal balance)
       const cost = aiResult.costUsd * (1 + config.game.aiCostMarkupPercent / 100);
-      const paid = await BalanceService.deduct(currentPlayer.user_id, cost, "doudizhu_move", matchId);
-
-      if (!paid) {
-        await GameService.forfeitDoudizhuRobot(matchId, players, landlordIdx, state.currentPlayerIdx, "insufficient_balance");
-        return;
-      }
 
       // Apply play
       state = DoudizhuTool.applyPlay(state, finalCards);
@@ -650,12 +649,24 @@ export class GameService {
   }
 
   private static async filterEligibleRobots(robots: RobotRow[]): Promise<RobotRow[]> {
+    // Dynamic import to avoid circular dependencies if any, or just import it at top
+    const { getProviderById } = await import("../config/providers");
+
     const busyIds = await MatchService.getBusyRobotIds();
     const eligible: RobotRow[] = [];
     for (const r of robots) {
       if (busyIds.has(r.id)) continue;
-      const balance = await BalanceService.getBalance(r.user_id);
-      if (balance <= 0) continue;
+      if (r.status !== "active") continue;
+
+      // Check if API key is required and present
+      const provider = getProviderById(r.provider ?? "");
+      const requiresApiKey = provider ? provider.requiresApiKey : true;
+      if (requiresApiKey && (!r.api_key_encrypted || r.api_key_encrypted.trim() === "")) {
+        LogCenter.debug("GameService", `Robot ${r.id} is skipping because it is missing an API key.`);
+        continue;
+      }
+
+      /* Removed BalanceService.getBalance check - users use their own API keys */
 
       // Check daily match limit (30 matches per day based on NY time)
       const todayCount = await RobotService.getTodayMatchCount(r.id);

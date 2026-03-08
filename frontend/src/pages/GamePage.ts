@@ -45,6 +45,7 @@ export class GamePage {
   <div class="match-layout">
     <div class="match-left">
       <div id="match-info" class="card mb-1"><div class="loading-pulse"></div></div>
+      <div id="match-forfeit"></div>
       <div id="board-top-label" class="board-label"></div>
       <div id="game-board" class="board-container"></div>
       <div id="board-bottom-label" class="board-label"></div>
@@ -54,7 +55,7 @@ export class GamePage {
         <button class="btn btn-sm" id="btn-next">▶</button>
         <button class="btn btn-sm" id="btn-last">⏭</button>
         <span id="move-counter" class="ml-1">—</span>
-        <span id="live-indicator" class="live-indicator" style="display:none">● ${Trans.t("game.live_updating", "实时获取信息中...")}</span>
+        <span id="live-indicator" class="live-indicator" style="display:none">● ${Trans.t("game.live_updating", "实时获取对局信息中...")}</span>
       </div>
     </div>
     <div class="match-right">
@@ -230,10 +231,10 @@ export class GamePage {
 
       const landlordId = match.robot_landlord_id;
       const landlordName = landlordId === match.robot_white_id ? match.white_name :
-                          landlordId === match.robot_black_id ? match.black_name :
-                          match.third_name;
+        landlordId === match.robot_black_id ? match.black_name :
+          match.third_name;
       const landlordIdx = landlordId === match.robot_white_id ? 0 :
-                         landlordId === match.robot_black_id ? 1 : 2;
+        landlordId === match.robot_black_id ? 1 : 2;
 
       // Determine winner display
       const winnerId = match.winner_id;
@@ -249,9 +250,14 @@ export class GamePage {
         );
       }
 
-      let forfeitInfo = '';
+      let forfeitInfoHtml = '';
       if (match.status === 'forfeited' && match.forfeit_reason) {
-        forfeitInfo = `<div class="forfeit-info">❌ ${Trans.t("game.forfeit_reason", "认负原因")}:</div><div class="forfeit-reason">${match.forfeit_reason}</div>`;
+        forfeitInfoHtml = `<div class="card mb-1" style="background: #fef2f2; border: 1px solid #fca5a5; padding: 1rem;">
+          <div style="color: #b91c1c; font-weight: bold; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>❌</span> ${Trans.t("game.forfeit_reason", "认负原因")}
+          </div>
+          <div style="color: #991b1b; font-size: 0.9rem; padding-left: 1.5rem; word-break: break-word; white-space: pre-wrap;">${match.forfeit_reason}</div>
+        </div>`;
       }
 
       el.innerHTML = `
@@ -289,8 +295,10 @@ export class GamePage {
               <span class="info-value winner">${match.winner_id === landlordId ? landlordName + ' (' + Trans.t("game.landlord", "地主") + ')' : Trans.t("game.farmers_alliance", "农民联盟")}</span>
             </div>` : ''}
           </div>
-        </div>
-        ${forfeitInfo}`;
+        </div>`;
+
+      const forfeitContainer = this.container.querySelector("#match-forfeit");
+      if (forfeitContainer) forfeitContainer.innerHTML = forfeitInfoHtml;
 
       // 斗地主不需要棋盘标签
       const topLabel = this.container.querySelector("#board-top-label");
@@ -302,22 +310,53 @@ export class GamePage {
       const whiteIsMe = currentUserId && match.white_user_id === currentUserId;
       const blackIsMe = currentUserId && match.black_user_id === currentUserId;
 
-      let forfeitInfo = '';
+      const whiteWon = match.winner_id === match.robot_white_id;
+      const blackWon = match.winner_id === match.robot_black_id;
+
+      let forfeitInfoHtml = '';
       if (match.status === 'forfeited' && match.forfeit_reason) {
-        forfeitInfo = `<div class="forfeit-info">❌ ${Trans.t("game.forfeit_reason", "认负原因")}:</div><div class="forfeit-reason">${match.forfeit_reason}</div>`;
+        forfeitInfoHtml = `<div class="card mb-1" style="background: #fef2f2; border: 1px solid #fca5a5; padding: 1rem;">
+          <div style="color: #b91c1c; font-weight: bold; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.5rem;">
+            <span>❌</span> ${Trans.t("game.forfeit_reason", "认负原因")}
+          </div>
+          <div style="color: #991b1b; font-size: 0.9rem; padding-left: 1.5rem; word-break: break-word; white-space: pre-wrap;">${match.forfeit_reason}</div>
+        </div>`;
       }
 
       el.innerHTML = `
-        <div class="match-header">
-          <span class="player white-player ${whiteIsMe ? 'my-robot' : ''}" id="white-player-name">♔ ${match.white_name}</span>
-          <span class="vs">vs</span>
-          <span class="player black-player ${blackIsMe ? 'my-robot' : ''}" id="black-player-name">♚ ${match.black_name}</span>
-        </div>
-        <div class="match-meta">
-          <span class="badge badge-${match.status}">${Trans.t(`game.status.${match.status}`)}</span>
-          ${match.winner_id ? `<span>${Trans.t("game.winner", "Winner")}: ${match.winner_id === match.robot_white_id ? match.white_name : match.black_name}</span>` : ""}
-        </div>
-        ${forfeitInfo}`;
+        <div class="doudizhu-match-header chess-match-header">
+          <div class="match-title">${Trans.t("game.chess_match", "国际象棋对局")}</div>
+          <div class="players-grid" style="grid-template-columns: repeat(2, 1fr);">
+            <div class="player-card ${whiteIsMe ? 'my-robot' : ''}">
+              <span class="player-icon">♔</span>
+              <span class="player-name">${match.white_name} (${Trans.t("game.white", "白")})</span>
+              ${whiteWon ? '<span class="trophy">🏆</span>' : ''}
+            </div>
+            <div class="player-card ${blackIsMe ? 'my-robot' : ''}">
+              <span class="player-icon">♚</span>
+              <span class="player-name">${match.black_name} (${Trans.t("game.black", "黑")})</span>
+              ${blackWon ? '<span class="trophy">🏆</span>' : ''}
+            </div>
+          </div>
+          <div class="match-info-row">
+            <div class="info-item">
+              <span class="info-label">${Trans.t("game.status", "状态")}</span>
+              <span class="badge badge-${match.status}">${Trans.t(`game.status.${match.status}`)}</span>
+            </div>
+            ${match.winner_id ? `
+            <div class="info-item">
+              <span class="info-label">${Trans.t("game.winner", "胜者")}</span>
+              <span class="info-value winner">${whiteWon ? match.white_name : match.black_name}</span>
+            </div>` : match.status === 'finished' && !match.winner_id ? `
+            <div class="info-item">
+              <span class="info-label">${Trans.t("game.result", "结果")}</span>
+              <span class="info-value text-muted">${Trans.t("game.draw", "平局")}</span>
+            </div>` : ''}
+          </div>
+        </div>`;
+
+      const forfeitContainer = this.container.querySelector("#match-forfeit");
+      if (forfeitContainer) forfeitContainer.innerHTML = forfeitInfoHtml;
 
       // Update board labels
       const topLabel = this.container.querySelector("#board-top-label");

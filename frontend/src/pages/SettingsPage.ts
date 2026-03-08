@@ -13,9 +13,8 @@ export class SettingsPage {
     this.container = container;
     this.container.innerHTML = this.renderSkeleton();
     AppLogic.loadSettings();
-    AppLogic.loadBalance();
     EventTool.on("settings_loaded", (d) => this.renderSettings(d as Record<string, unknown>));
-    EventTool.on("balance_loaded", (d) => this.renderBalance(d as Record<string, unknown>));
+
     this.container.querySelector("#settings-form")?.addEventListener("submit", (e) => {
       e.preventDefault();
       AppLogic.onSaveSettings(e.target as HTMLFormElement);
@@ -24,7 +23,7 @@ export class SettingsPage {
 
   unmount(): void {
     EventTool.clear("settings_loaded");
-    EventTool.clear("balance_loaded");
+
   }
 
   private renderSkeleton(): string {
@@ -32,13 +31,7 @@ export class SettingsPage {
 <div class="page">
   <h2>${Trans.t("nav.settings", "Settings")}</h2>
 
-  <div class="card mb-2">
-    <h3>${Trans.t("balance.label", "Balance")}</h3>
-    <div id="balance-display">
-      <div class="loading-pulse"></div>
-    </div>
-    <p class="text-muted mt-1">${Trans.t("balance.info", "Balance is deducted for each AI move. When it reaches $0, your robots are suspended.")}</p>
-  </div>
+
 
   <div class="card">
     <h3>${Trans.t("settings.api_key", "OpenRouter API Key")}</h3>
@@ -65,10 +58,5 @@ export class SettingsPage {
     }
   }
 
-  private renderBalance(data: Record<string, unknown>): void {
-    const el = this.container.querySelector("#balance-display");
-    if (el) {
-      el.innerHTML = `<div class="balance-amount">$${Number(data.balance ?? 0).toFixed(6)}</div>`;
-    }
-  }
+
 }

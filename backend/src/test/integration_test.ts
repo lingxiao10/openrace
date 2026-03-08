@@ -174,12 +174,12 @@ async function run(): Promise<void> {
   let bobRobotId = 0;
 
   await test("RobotService: create robot for alice", async () => {
-    aliceRobotId = await RobotService.create(aliceId, "TestAliceBot", "google/gemini-flash-1-5", "Play aggressive");
+    aliceRobotId = await RobotService.create(aliceId, "TestAliceBot", "google/gemini-flash-1-5", "Play aggressive", "chess", "openrouter", "my-enc-key");
     assert(aliceRobotId > 0, "should return positive id");
   });
 
   await test("RobotService: create robot for bob", async () => {
-    bobRobotId = await RobotService.create(bobId, "TestBobBot", "google/gemini-flash-1-5", "Play defensive");
+    bobRobotId = await RobotService.create(bobId, "TestBobBot", "google/gemini-flash-1-5", "Play defensive", "chess", "openrouter", "my-enc-key");
     assert(bobRobotId > 0, "should return positive id");
   });
 

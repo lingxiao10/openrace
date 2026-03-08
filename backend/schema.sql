@@ -38,8 +38,10 @@ CREATE TABLE IF NOT EXISTS robots (
   losses             INT UNSIGNED NOT NULL DEFAULT 0,
   draws              INT UNSIGNED NOT NULL DEFAULT 0,
   elo                INT          NOT NULL DEFAULT 1200,
+  removed            TINYINT(1)   NOT NULL DEFAULT 0,
   created_at         DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+  FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+  INDEX idx_robots_removed (removed)
 );
 
 CREATE TABLE IF NOT EXISTS seasons (

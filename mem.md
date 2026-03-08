@@ -50,7 +50,13 @@ cd frontend && npm install && npm run dev
 - 国际化：`robot.today_matches` (zh: "今日对局", en: "Today's Matches")
 
 ### DB 表
-`users` `user_settings` `robots` (含 `game_type`) `seasons` `matches` (含 `game_type`, `robot_third_id`, `robot_landlord_id`) `match_moves` `balance_log` `leaderboard_snapshots`
+`users` `user_settings` `robots` (含 `game_type`, `removed`) `seasons` `matches` (含 `game_type`, `robot_third_id`, `robot_landlord_id`) `match_moves` `balance_log` `leaderboard_snapshots`
+
+### 软删除（2026-03-09）
+- `robots` 表增加 `removed` 字段（TINYINT, 默认0）
+- `RobotService.delete` 改为逻辑删除（`removed = 1`）
+- 所有机器人查询（列表、详情、排行榜、匹配过滤）增加 `removed = 0` 过滤
+- 解决 `leaderboard_snapshots` 等表因外键约束导致无法硬删除的问题
 
 ### 后端文件
 - tools: `EncryptTool` `ChessTool` `DoudizhuTool` `OpenRouterTool` `LogTool`（含500条内存缓冲）
@@ -165,6 +171,9 @@ cd frontend && npm install && npm run dev
 - `playChessGame` 从最后move的FEN恢复，重建moveHistory
 - `playDoudizhuGame` 从最后move的JSON state恢复
 - 服务重启后会自动恢复所有超时对局
+
+### 文案完善（2026-03-09）
+- 对局页面实时更新提示语从 "实时获取信息中..." 改为 "实时获取对局信息中..." (zh)
 
 ### 国际化规范（2026-03-09）
 **强制要求**：所有用户可见的文本必须使用 `Trans.t()` 进行国际化
@@ -331,3 +340,16 @@ cd frontend && npm install && npm run dev
 - **数据同步**: 后端通过 `Action.syncData("providers", PROVIDERS)` 发送，前端通过 `sync_data` action存储到 `window.__sync_providers`
 - **API Key加密**: 创建机器人时，后端使用 `EncryptTool.encrypt()` 加密存储API key（AES-256-CBC），使用时解密
 
+### 国际化界面优化（2026-03-09）
+- **多语言切换**: 右上角语言选择器增加国旗图标（🇨🇳 中文 / 🇺🇸 EN），提升视觉引导。
+### 机器人限额调整（2026-03-09）
+- **数量限制**: 每个用户的机器人上限从 3 个提至 5 个（`config.game.robotMaxPerUser`），后端逻辑与前端验证已自动同步。
+### 对局显示与匹配逻辑修复（2026-03-09）
+- **对局可见性修复**: `MatchService` 中的 `JOIN` 逻辑移除了 `removed = 0` 的硬性过滤，确保即便参与机器人被删除，历史对局（Recent Matches）和进行中的对局（Running Matches）依然能在页面正确显示。
+- **废弃余额系统**: 彻底移除了后端 `GameService` 和 `RobotService` 中的用户余额校验。现在机器人匹配不再受平台内部余额限制，直接使用用户配置的 API Key 运行。
+- **UI 清理**: 移除了导航栏和设置页面中的余额显示，匹配逻辑已完全转向“用户自备 Key”模式。
+- **多玩家统计修复**: `RobotService.countInGame` 增加对 `robot_third_id` 的统计，确保斗地主对局中的机器人也被正确计入“对局中”状态。
+### 开源准备（2026-03-09）
+- **协议设置**: 添加了 `Apache License 2.0`。
+- **文档维护**: 创建了英文版 `README.md` (默认) 和中文版 `README_ZH.md`。
+- **Git 配置**: 设置远程仓库地址为 `https://github.com/lingxiao10/openrace`。
