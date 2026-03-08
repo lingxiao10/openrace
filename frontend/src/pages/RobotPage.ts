@@ -1,0 +1,375 @@
+// ============================================================
+// RobotPage.ts — Robot management. Calls AppLogic only.
+// ============================================================
+
+import { AppLogic } from "../AppLogic";
+import { Trans } from "../core/Trans";
+import { Config } from "../core/Config";
+import { EventTool } from "../tools/EventTool";
+
+const DEFAULT_STRATEGY = `Play solid, principled chess. Control the center with pawns. Develop knights before bishops. Castle early for king safety. Avoid moving the same piece twice in the opening. Look for tactical opportunities but prioritize positional play.`;
+
+export class RobotPage {
+  private container!: HTMLElement;
+
+  mount(container: HTMLElement): void {
+    this.container = container;
+    this.container.innerHTML = this.renderSkeleton();
+    this.populateProviders();
+    AppLogic.loadRobots();
+    EventTool.on("robots_loaded", (data) => this.renderRobots(data as Array<Record<string, unknown>>));
+    this.bindCreateForm();
+
+    // Listen for trigger from HomePage
+    document.addEventListener("trigger_create_robot", () => {
+      const modal = document.getElementById("create-robot-modal");
+      if (modal) modal.classList.remove("hidden");
+    });
+  }
+
+  private populateProviders(): void {
+    const providers = (window as any).__sync_providers as Array<{ id: string; name: string; models: Array<{ id: string; name: string }>; topUpUrl?: string }> | undefined;
+    if (!providers || !Array.isArray(providers)) {
+      console.warn("Providers not loaded yet");
+      return;
+    }
+
+    const providerSelect = document.getElementById("provider-select") as HTMLSelectElement;
+    const modelSelect = document.getElementById("model-select") as HTMLSelectElement;
+    const customModelInput = document.getElementById("custom-model-input") as HTMLInputElement;
+    const baseUrlGroup = document.getElementById("base-url-group") as HTMLDivElement;
+    const baseUrlInput = document.getElementById("base-url-input") as HTMLInputElement;
+    const topupLink = document.getElementById("provider-topup-link") as HTMLAnchorElement;
+
+    if (!providerSelect || !modelSelect || !customModelInput || !baseUrlGroup || !baseUrlInput) return;
+
+    // Populate providers
+    providers.forEach((p) => {
+      const option = document.createElement("option");
+      option.value = p.id;
+      option.textContent = p.name;
+      providerSelect.appendChild(option);
+    });
+
+    // On provider change, update models and topup link
+    providerSelect.addEventListener("change", () => {
+      const selectedProvider = providers.find((p) => p.id === providerSelect.value);
+      modelSelect.innerHTML = `<option value="">${Trans.t("robot.select_model", "Select Model")}</option>`;
+      customModelInput.style.display = "none";
+      customModelInput.value = "";
+      modelSelect.removeAttribute("disabled");
+
+      // Handle OpenAI Compatible special case
+      if (providerSelect.value === "openai-compatible") {
+        baseUrlGroup.style.display = "block";
+        baseUrlInput.setAttribute("required", "required");
+        // For OpenAI Compatible, directly show custom model input
+        modelSelect.style.display = "none";
+        customModelInput.style.display = "block";
+        customModelInput.setAttribute("required", "required");
+        customModelInput.placeholder = Trans.t("robot.model_name_placeholder", "Enter model name (e.g., gpt-4)");
+        topupLink.style.display = "none";
+        return;
+      } else {
+        baseUrlGroup.style.display = "none";
+        baseUrlInput.removeAttribute("required");
+        baseUrlInput.value = "";
+        modelSelect.style.display = "block";
+      }
+
+      if (selectedProvider) {
+        selectedProvider.models.forEach((m) => {
+          const option = document.createElement("option");
+          option.value = m.id;
+          option.textContent = m.name;
+          modelSelect.appendChild(option);
+        });
+
+        // Add "Custom" option
+        const customOption = document.createElement("option");
+        customOption.value = "__custom__";
+        customOption.textContent = Trans.t("robot.custom_model", "Custom");
+        modelSelect.appendChild(customOption);
+
+        if (selectedProvider.topUpUrl) {
+          topupLink.href = selectedProvider.topUpUrl;
+          topupLink.style.display = "block";
+        } else {
+          topupLink.style.display = "none";
+        }
+      } else {
+        topupLink.style.display = "none";
+      }
+    });
+
+    // On model change, show/hide custom input
+    modelSelect.addEventListener("change", () => {
+      if (modelSelect.value === "__custom__") {
+        customModelInput.style.display = "block";
+        customModelInput.setAttribute("required", "required");
+        customModelInput.placeholder = Trans.t("robot.custom_model_placeholder", "Enter custom model name");
+      } else {
+        customModelInput.style.display = "none";
+        customModelInput.removeAttribute("required");
+        customModelInput.value = "";
+      }
+    });
+  }
+
+  unmount(): void {
+    EventTool.clear("robots_loaded");
+  }
+
+  private renderSkeleton(): string {
+    const lang = Trans.getLang();
+    const defaultGameType = lang === "zh" ? "doudizhu" : "chess";
+
+    return `
+<div class="page">
+  <div class="robots-header">
+    <h2>${Trans.t("robot.title", "My Robots")}</h2>
+    <button class="btn btn-primary" id="open-create-modal">
+      <span>➕</span>
+      ${Trans.t("robot.create", "Create Robot")}
+    </button>
+  </div>
+
+  <div id="robot-list"><div class="loading-pulse"></div></div>
+</div>
+
+<!-- Create Robot Modal -->
+<div class="modal-overlay hidden" id="create-robot-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3>${Trans.t("robot.create", "Create Robot")}</h3>
+      <button class="modal-close" id="close-create-modal">✕</button>
+    </div>
+    <form id="create-robot-form">
+      <div class="form-group">
+        <label>${Trans.t("robot.name", "Robot Name")}</label>
+        <input name="name" required placeholder="e.g. DeepBlue Jr." />
+      </div>
+      <div class="form-group">
+        <label>${Trans.t("robot.game_type", "Game Type")}</label>
+        <select name="game_type" id="game-type-select">
+          <option value="chess"${defaultGameType === "chess" ? " selected" : ""}>${Trans.t("robot.chess", "Chess")}</option>
+          <option value="doudizhu"${defaultGameType === "doudizhu" ? " selected" : ""}>${Trans.t("robot.doudizhu", "Doudizhu")}</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>${Trans.t("robot.provider", "AI Provider")}</label>
+        <select name="provider" id="provider-select" required>
+          <option value="">${Trans.t("robot.select_provider", "Select Provider")}</option>
+        </select>
+        <a href="#" id="provider-topup-link" target="_blank" style="display:none; font-size: 12px; color: #3498db; margin-top: 4px;">
+          ${Trans.t("robot.topup", "Top up balance")} →
+        </a>
+      </div>
+      <div class="form-group" id="base-url-group" style="display: none;">
+        <label>${Trans.t("robot.base_url", "Base URL")}</label>
+        <input type="text" name="base_url" id="base-url-input" placeholder="https://api.example.com/v1" />
+        <small style="color: #7f8c8d; font-size: 11px;">${Trans.t("robot.base_url_hint", "Custom API endpoint for OpenAI-compatible services")}</small>
+      </div>
+      <div class="form-group">
+        <label>${Trans.t("robot.api_key", "API Key")}</label>
+        <input type="password" name="api_key" required placeholder="${Trans.t("robot.api_key_placeholder", "Enter your API key")}" />
+        <small style="color: #7f8c8d; font-size: 11px;">${Trans.t("robot.api_key_hint", "Your API key is encrypted and stored securely. Cannot be modified after creation.")}</small>
+      </div>
+      <div class="form-group">
+        <label>${Trans.t("robot.model", "AI Model")}</label>
+        <select name="model" id="model-select" required>
+          <option value="">${Trans.t("robot.select_model", "Select Model")}</option>
+        </select>
+        <input type="text" id="custom-model-input" name="custom_model" placeholder="${Trans.t("robot.custom_model_placeholder", "Enter custom model name")}" style="display: none; margin-top: 8px;" />
+      </div>
+      <div class="form-group">
+        <label id="strategy-label">${Trans.t("robot.chess_strategy", "Chess Strategy")}</label>
+        <textarea name="strategy" rows="4" placeholder="${Trans.t("robot.strategy_placeholder", "Describe your robot's game strategy...")}"></textarea>
+        <button type="button" class="btn btn-sm btn-outline mt-1" id="use-default-strategy">
+          ${Trans.t("robot.use_default", "Use Default Strategy")}
+        </button>
+      </div>
+      <button type="submit" class="btn btn-primary btn-full">${Trans.t("robot.create_btn", "Create Robot")}</button>
+    </form>
+  </div>
+</div>`;
+  }
+
+  private bindCreateForm(): void {
+    // Open modal
+    this.container.querySelector("#open-create-modal")?.addEventListener("click", () => {
+      const modal = document.getElementById("create-robot-modal");
+      if (modal) modal.classList.remove("hidden");
+
+      // 设置默认游戏类型和策略标签
+      const lang = Trans.getLang();
+      const gameTypeSelect = document.getElementById("game-type-select") as HTMLSelectElement;
+      const label = document.querySelector("#strategy-label");
+
+      if (gameTypeSelect && label) {
+        const defaultGameType = lang === "zh" ? "doudizhu" : "chess";
+        gameTypeSelect.value = defaultGameType;
+        label.textContent = defaultGameType === "doudizhu"
+          ? Trans.t("robot.doudizhu_strategy", "Doudizhu Strategy")
+          : Trans.t("robot.chess_strategy", "Chess Strategy");
+      }
+    });
+
+    // Close modal
+    const closeModal = () => {
+      const modal = document.getElementById("create-robot-modal");
+      if (modal) modal.classList.add("hidden");
+    };
+
+    document.getElementById("close-create-modal")?.addEventListener("click", closeModal);
+
+    // 移除点击遮罩层关闭的功能，只能点叉关闭
+
+    // Game type change handler
+    this.container.querySelector("#game-type-select")?.addEventListener("change", (e) => {
+      const gameType = (e.target as HTMLSelectElement).value;
+      const label = document.querySelector("#strategy-label");
+      if (label) {
+        label.textContent = gameType === "doudizhu"
+          ? Trans.t("robot.doudizhu_strategy", "Doudizhu Strategy")
+          : Trans.t("robot.chess_strategy", "Chess Strategy");
+      }
+    });
+
+    document.querySelector("#create-robot-form")?.addEventListener("submit", (e) => {
+      e.preventDefault();
+      const form = e.target as HTMLFormElement;
+      const modelSelect = document.getElementById("model-select") as HTMLSelectElement;
+      const customModelInput = document.getElementById("custom-model-input") as HTMLInputElement;
+
+      // If custom model is selected, use the custom input value
+      if (modelSelect.value === "__custom__" && customModelInput.value.trim()) {
+        const modelInput = form.querySelector<HTMLSelectElement>('select[name="model"]');
+        if (modelInput) {
+          // Temporarily set the value to the custom model name
+          const customOption = document.createElement("option");
+          customOption.value = customModelInput.value.trim();
+          customOption.selected = true;
+          modelSelect.appendChild(customOption);
+        }
+      }
+
+      AppLogic.onCreateRobot(form);
+      closeModal();
+      // Reset form
+      form.reset();
+      customModelInput.style.display = "none";
+    });
+
+    document.querySelector("#use-default-strategy")?.addEventListener("click", () => {
+      const ta = document.querySelector<HTMLTextAreaElement>("textarea[name=strategy]");
+      if (ta) ta.value = DEFAULT_STRATEGY;
+    });
+  }
+
+  private renderRobots(robots: Array<Record<string, unknown>>): void {
+    const el = this.container.querySelector("#robot-list");
+    if (!el) return;
+    if (!robots.length) {
+      el.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">🤖</div>
+          <div class="empty-title">${Trans.t("robot.empty_title", "还没有机器人")}</div>
+          <div class="empty-text">${Trans.t("robot.empty_text", "点击上方按钮创建你的第一个 AI 机器人")}</div>
+        </div>`;
+      return;
+    }
+    el.innerHTML = `<div class="robots-grid">${robots.map((r) => this.renderRobotCard(r)).join("")}</div>`;
+    this.bindRobotActions();
+  }
+
+  private renderRobotCard(r: Record<string, unknown>): string {
+    const suspended = r.status === "suspended";
+    const gameType = r.game_type as string;
+    const gameIcon = gameType === "doudizhu" ? "🃏" : "♟";
+    const gameLabel = gameType === "doudizhu" ? Trans.t("robot.doudizhu", "斗地主") : Trans.t("robot.chess", "国际象棋");
+    const todayMatches = r.today_matches as number || 0;
+    const maxDailyMatches = r.max_daily_matches as number || 30;
+    const errorCount = r.error_count as number || 0;
+    const provider = r.provider as string || "unknown";
+
+    return `
+<div class="robot-card-new ${suspended ? 'robot-suspended' : ''}" data-id="${r.id}">
+  <div class="robot-card-header">
+    <div class="robot-game-badge ${gameType}">${gameIcon}</div>
+    <div class="robot-status-badge ${suspended ? 'status-suspended' : 'status-active'}">
+      ${suspended ? '⏸' : '▶'}
+    </div>
+  </div>
+
+  <div class="robot-card-body">
+    <h3 class="robot-name">${r.name}</h3>
+    <div class="robot-game-type">${gameLabel}</div>
+
+    ${suspended && errorCount >= 5 ? `
+    <div class="robot-error-notice" style="background: #fee; border: 1px solid #fcc; padding: 8px; border-radius: 4px; margin: 8px 0; font-size: 12px; color: #c33;">
+      ⚠️ ${Trans.t("robot.api_error", "API连续失败5次，已暂停")}
+    </div>
+    ` : ''}
+
+    <div class="robot-daily-limit">
+      <span class="daily-limit-label">${Trans.t("robot.today_matches", "今日对局")}</span>
+      <span class="daily-limit-value">${todayMatches}/${maxDailyMatches}</span>
+    </div>
+
+    <div class="robot-meta">
+      <div class="robot-meta-item">
+        <span class="robot-meta-label">${Trans.t("robot.provider", "Provider")}</span>
+        <span class="robot-meta-value">${provider}</span>
+      </div>
+      <div class="robot-meta-item">
+        <span class="robot-meta-label">${Trans.t("robot.model", "Model")}</span>
+        <span class="robot-meta-value">${r.model}</span>
+      </div>
+      <div class="robot-meta-item">
+        <span class="robot-meta-label">${Trans.t("robot.elo", "ELO")}</span>
+        <span class="robot-meta-value">${r.elo}</span>
+      </div>
+      <div class="robot-meta-item">
+        <span class="robot-meta-label">${Trans.t("robot.record", "战绩")}</span>
+        <span class="robot-meta-value">${r.wins}W ${r.losses}L ${r.draws}D</span>
+      </div>
+    </div>
+
+    ${r.strategy ? `<div class="robot-strategy-preview">"${(r.strategy as string).slice(0, 80)}${(r.strategy as string).length > 80 ? '...' : ''}"</div>` : ''}
+  </div>
+
+  <div class="robot-card-footer">
+    ${suspended
+      ? `<button class="btn-card btn-card-primary activate-btn" data-id="${r.id}">
+          <span>▶</span> ${Trans.t("robot.activate", "启用")}
+        </button>`
+      : `<button class="btn-card btn-card-secondary suspend-btn" data-id="${r.id}">
+          <span>⏸</span> ${Trans.t("robot.suspend", "暂停")}
+        </button>`
+    }
+    <button class="btn-card btn-card-danger delete-btn" data-id="${r.id}">
+      <span>🗑</span> ${Trans.t("robot.delete", "删除")}
+    </button>
+  </div>
+</div>`;
+  }
+
+  private bindRobotActions(): void {
+    this.container.querySelectorAll(".delete-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        AppLogic.onDeleteRobot(Number((btn as HTMLElement).dataset.id));
+      });
+    });
+    this.container.querySelectorAll(".activate-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        AppLogic.onActivateRobot(Number((btn as HTMLElement).dataset.id));
+      });
+    });
+    this.container.querySelectorAll(".suspend-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        AppLogic.onSuspendRobot(Number((btn as HTMLElement).dataset.id));
+      });
+    });
+  }
+}
