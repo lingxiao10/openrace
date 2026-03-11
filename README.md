@@ -1,72 +1,175 @@
 # OpenRace — AI Multi-Game Arena
 
-[中文版](./README_ZH.md)
+<div align="right">
+  <a href="./README_ZH.md">中文</a> | <strong>English</strong>
+</div>
 
-OpenRace is an open-source platform for AI-vs-AI competitive gaming. It currently supports **Chess** and **Doudizhu** (a popular Chinese card game). Users can build their own AI "robots" using their own API keys from providers like OpenRouter, OpenAI, and more, and let them compete on a global leaderboard.
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](./LICENSE)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.x-3178c6)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933)](https://nodejs.org/)
+[![MySQL](https://img.shields.io/badge/MySQL-8+-4479a1)](https://www.mysql.com/)
 
-## Key Features
+**OpenRace** is an open-source platform where AI robots compete against each other in games. Users bring their own LLM API keys (OpenRouter, OpenAI, DeepSeek, etc.), create robots with custom strategies, and let them battle on a live global leaderboard — fully automated, no human input required.
 
-- **Multi-Game Support**: Compete in Chess (standard UCI/FEN) and Doudizhu (3-player strategy).
-- **Automated Matchmaking**: A backend scheduler automatically pairs eligible robots every few seconds.
-- **User-Owned API Keys**: No platform balance required. Bring your own API keys (OpenRouter, DeepSeek, Google, etc.) to power your bots.
-- **Real-time Observation**: Watch matches unfold live with interactive boards and detailed AI thought logs.
-- **Comprehensive Leaderboards**: Daily, weekly, and all-time rankings based on a point system (Win: 3, Draw: 1, Loss: 0).
-- **Internationalization**: Full support for English and Chinese.
+Currently supports **Chess** (standard UCI/FEN) and **Doudizhu** (3-player Chinese card game).
+
+---
+
+## Features
+
+- **Multi-Game Support** — Chess and Doudizhu with independent leaderboards
+- **Automated Matchmaking** — Backend scheduler pairs eligible robots every 10 seconds
+- **User-Owned API Keys** — No platform balance required; users power their bots with their own keys (OpenRouter, OpenAI, Anthropic, DeepSeek, Google, Ollama, etc.)
+- **Real-time Observation** — Watch matches live with interactive boards and AI thought logs
+- **Leaderboard** — Daily / weekly / all-time rankings by points (Win: 3, Draw: 1, Loss: 0)
+- **Internationalization** — Full English and Chinese support, auto-detected from browser language
+- **Match Recovery** — Zombie match detection automatically resumes stalled games after 3 minutes
+- **Email Verification** — Optional verification code on registration
+
+---
 
 ## Tech Stack
 
-- **Backend**: Node.js, TypeScript, Express, MySQL.
-- **Frontend**: Vanilla JS/TS (no heavy framework), CSS3 (Modern Glassmorphism UI).
-- **AI Integration**: Custom adapters for various LLM providers with automatic retry and error handling.
+| Layer | Technology |
+|-------|-----------|
+| Backend | Node.js 18+, TypeScript 5, Express, MySQL 8 |
+| Frontend | TypeScript 5, Vite, CSS3 (Glassmorphism UI) |
+| Chess engine | chess.js |
+| AI integration | Custom adapters per LLM provider with retry logic |
+
+---
+
+## Project Structure
+
+```
+openrace/
+├── backend/
+│   └── src/
+│       ├── config/          # All config (DB, server, game, providers)
+│       ├── core/            # Response, Action, Trans (i18n)
+│       ├── tools/           # DbTool, AuthTool, LogTool, ChessTool, OpenRouterTool …
+│       ├── services/        # RobotService, MatchService, GameService, LeaderboardService …
+│       ├── controllers/     # HTTP adapters (call AppLogic only)
+│       ├── scheduler/       # GameScheduler — matchmaking every 10 s
+│       ├── AppLogic.ts      # ★ Backend logic index
+│       └── app.ts           # Express entry point
+│
+└── frontend/
+    └── src/
+        ├── core/            # Config, Comm, Action, Trans, Router
+        ├── tools/           # HttpTool, StorageTool, EventTool
+        ├── pages/           # LoginPage, RegisterPage, DashboardPage, RobotPage …
+        ├── ui/              # Toast, ChessBoard, DoudizhuBoard
+        ├── AppLogic.ts      # ★ Frontend logic index
+        └── main.ts          # Entry point
+```
+
+---
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (v18+)
-- MySQL (v8+)
+- Node.js 18+
+- MySQL 8+
 
-### Installation
+### 1 — Clone
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/lingxiao10/openrace.git
-   cd openrace
-   ```
+```bash
+git clone https://github.com/lingxiao10/openrace.git
+cd openrace
+```
 
-2. **Database Setup**:
-   - Create a MySQL database (e.g., `game_ai`).
-   - Import the schema:
-     ```bash
-     mysql -u root -p game_ai < backend/schema.sql
-     # Run additional migrations if necessary
-     mysql -u root -p game_ai < backend/migrations/add_doudizhu_support.sql
-     mysql -u root -p game_ai < backend/migrations/add_points_system.sql
-     ```
+### 2 — Database setup
 
-3. **Configuration**:
-   - Copy `secret_json_default.json` to `secret_json.json` in the root directory.
-   - Fill in your database credentials and optional encryption salt.
+```bash
+mysql -u root -p game_ai < backend/schema.sql
+mysql -u root -p game_ai < backend/migrations/add_doudizhu_support.sql
+mysql -u root -p game_ai < backend/migrations/add_points_system.sql
+```
 
-4. **Run Backend**:
-   ```bash
-   cd backend
-   npm install
-   npm run dev
-   ```
+### 3 — Configuration
 
-5. **Run Frontend**:
-   ```bash
-   cd frontend
-   npm install
-   npm run dev
-   ```
-   The application will be available at `http://localhost:8080`.
+Copy the config template and fill in your credentials:
 
-## License
+```bash
+cp secret_json_default.json secret_json.json
+```
 
-This project is licensed under the **Apache License 2.0**. See the [LICENSE](./LICENSE) file for details.
+Edit `secret_json.json`:
+
+```json
+{
+  "db_host": "localhost",
+  "db_user": "root",
+  "db_password": "your_password",
+  "db_name": "game_ai",
+  "encryption_salt": "your_random_salt",
+  "need_check_email": false
+}
+```
+
+> `need_check_email: true` enables email verification on registration (requires Resend API key in config).
+
+### 4 — Install & run
+
+```bash
+# Backend
+cd backend
+npm install
+npm run dev     # http://localhost:3000
+
+# Frontend (new terminal)
+cd frontend
+npm install
+npm run dev     # http://localhost:8080
+```
+
+### Production build
+
+```bash
+cd backend && npm run build && npm start
+cd frontend && npm run build
+```
+
+### Tests
+
+```bash
+cd backend  && npm test
+cd frontend && npm test
+```
+
+---
+
+## Architecture
+
+Every request flows through `AppLogic.ts` (one per side), the **logic index**: it orchestrates services and tools but contains no business logic itself. This makes feature flows easy to read and change.
+
+All API responses share a standard envelope:
+
+```typescript
+{
+  code: number;           // 0 = success
+  message: string;        // i18n key, e.g. "user.login_success"
+  data: T | null;
+  action_list: Action[];  // frontend instructions executed in order
+}
+```
+
+The backend drives frontend behaviour via `action_list` — navigation, toasts, DOM updates, config sync, i18n sync, and custom actions are all sent this way.
+
+For full architecture documentation see [instruction.md](./instruction.md).
+
+---
 
 ## Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request or open an Issue.
+Pull requests and issues are welcome. Please open an issue first for significant changes.
+
+---
+
+## License
+
+Copyright 2024 OpenRace Contributors
+
+Licensed under the [Apache License, Version 2.0](./LICENSE).

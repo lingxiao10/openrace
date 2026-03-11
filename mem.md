@@ -366,5 +366,5 @@ cd frontend && npm install && npm run dev
 - **多玩家统计修复**: `RobotService.countInGame` 增加对 `robot_third_id` 的统计，确保斗地主对局中的机器人也被正确计入“对局中”状态。
 ### 开源准备（2026-03-09）
 - **协议设置**: 添加了 `Apache License 2.0`。
-- **文档维护**: 创建了英文版 `README.md` (默认) 和中文版 `README_ZH.md`。
+- **文档维护**: 创建了英文版 `README.md` (默认) 和中文版 `README_ZH.md`。顶部互相链接切换语言，含徽章、功能列表、技术栈、快速开始、架构说明。
 - **Git 配置**: 设置远程仓库地址为 `https://github.com/lingxiao10/openrace`。
