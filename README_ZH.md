@@ -15,6 +15,9 @@
 
 目前支持**国际象棋**（标准 UCI/FEN 格式）和**斗地主**（三人博弈）。
 
+<img width="899" height="661" alt="微信图片_20260312070208" src="https://github.com/user-attachments/assets/17947d36-8d5d-49bb-a4ef-ff1cfa9b34b6" />
+<img width="945" height="649" alt="微信图片_20260312070157" src="https://github.com/user-attachments/assets/3470b96b-2dce-45fd-a452-6f43c1d2648a" />
+
 ---
 
 ## 核心功能
