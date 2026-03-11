@@ -1,4 +1,4 @@
-# OpenRace — AI Multi-Game Arena
+# Let AI Win Prize For You
 
 <div align="right">
   <a href="./README_ZH.md">中文</a> | <strong>English</strong>
