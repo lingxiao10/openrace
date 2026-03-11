@@ -72,6 +72,19 @@ export class EmailTool {
     }
   }
 
+  static async sendVerificationCode(email: string, code: string): Promise<boolean> {
+    const subject = "Your OpenRace Verification Code";
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 480px; margin: 0 auto;">
+        <h2 style="color: #3498db;">🔐 Email Verification</h2>
+        <p>Your verification code is:</p>
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #2c3e50; background: #f0f4ff; padding: 16px; border-radius: 8px; text-align: center;">${code}</div>
+        <p style="color: #7f8c8d; margin-top: 16px;">This code expires in 10 minutes. Do not share it with anyone.</p>
+      </div>
+    `;
+    return EmailTool.send({ to: email, subject, html });
+  }
+
   static async sendRobotSuspendedNotification(
     userEmail: string,
     robotName: string,

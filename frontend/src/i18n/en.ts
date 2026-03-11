@@ -47,6 +47,13 @@ export const en: Record<string, string> = {
   "user.login_link": "Login here",
   "user.login_success": "Login successful",
   "user.register_success": "Registered!",
+  "user.send_code": "Send Code",
+  "user.code_sent": "Verification code sent, please check your email",
+  "user.code_label": "Verification Code",
+  "user.code_placeholder": "Enter 6-digit code",
+  "user.code_required": "Verification code is required",
+  "user.code_invalid": "Invalid or expired verification code",
+  "user.sending": "Sending...",
 
   // Dashboard
   "balance.label": "Balance",

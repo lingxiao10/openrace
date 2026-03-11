@@ -17,6 +17,8 @@ import { AuthTool } from "./tools/AuthTool";
 import { EncryptTool } from "./tools/EncryptTool";
 import { OpenRouterTool } from "./tools/OpenRouterTool";
 import { LogCenter } from "./log/LogCenter";
+import { VerificationCodeTool } from "./tools/VerificationCodeTool";
+import { EmailTool } from "./tools/EmailTool";
 import { UserService } from "./services/UserService";
 import { RobotService } from "./services/RobotService";
 import { MatchService } from "./services/MatchService";
@@ -60,9 +62,23 @@ export class AppLogic {
     if (!UserService.isValidEmail(body.email)) return Response.error(400, "user.invalid_email");
     if (await UserService.findByUsername(body.username)) return Response.error(409, "user.already_exists");
     if (await UserService.findByEmail(body.email)) return Response.error(409, "user.email_exists");
+    if (config.needCheckEmail) {
+      if (!body.verification_code) return Response.error(400, "user.code_required");
+      if (!VerificationCodeTool.verify(body.email, body.verification_code))
+        return Response.error(400, "user.code_invalid");
+    }
     await UserService.create(body.username, body.password, body.email);
     AppLogic.pushRegisterActions();
     return Response.success(null, "user.register_success");
+  }
+
+  static async handleSendVerificationCode(body: Record<string, string>): Promise<StandardResponse<unknown>> {
+    if (!body.email) return Response.paramError();
+    if (!UserService.isValidEmail(body.email)) return Response.error(400, "user.invalid_email");
+    if (await UserService.findByEmail(body.email)) return Response.error(409, "user.email_exists");
+    const code = VerificationCodeTool.generate(body.email);
+    await EmailTool.sendVerificationCode(body.email, code);
+    return Response.success(null, "user.code_sent");
   }
 
   static async handleGetProfile(req: Request): Promise<StandardResponse<unknown>> {
@@ -335,6 +351,7 @@ export class AppLogic {
       available_models: config.game.availableModels,
       default_model: config.game.defaultModel,
       robot_max_per_user: config.game.robotMaxPerUser,
+      need_check_email: config.needCheckEmail,
     };
   }
 

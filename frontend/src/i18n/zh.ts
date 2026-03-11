@@ -47,6 +47,13 @@ export const zh: Record<string, string> = {
   "user.login_link": "在此登录",
   "user.login_success": "登录成功",
   "user.register_success": "注册成功！",
+  "user.send_code": "发送验证码",
+  "user.code_sent": "验证码已发送，请查收邮件",
+  "user.code_label": "验证码",
+  "user.code_placeholder": "请输入6位验证码",
+  "user.code_required": "请输入验证码",
+  "user.code_invalid": "验证码错误或已过期",
+  "user.sending": "发送中...",
 
   // 仪表盘
   "balance.label": "余额",

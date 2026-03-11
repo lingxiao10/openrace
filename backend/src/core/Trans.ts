@@ -29,6 +29,9 @@ const translations: TransMap = {
   "user.email_exists":      { zh: "邮箱已被注册", en: "Email already registered" },
   "user.email_required":    { zh: "邮箱不能为空", en: "Email is required" },
   "user.invalid_email":     { zh: "邮箱格式不正确", en: "Invalid email format" },
+  "user.code_required":     { zh: "请输入验证码", en: "Verification code is required" },
+  "user.code_invalid":      { zh: "验证码错误或已过期", en: "Invalid or expired verification code" },
+  "user.code_sent":         { zh: "验证码已发送", en: "Verification code sent" },
 
   // ---- robot ----
   "robot.created":          { zh: "机器人已创建", en: "Robot created" },

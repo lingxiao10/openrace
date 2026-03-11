@@ -33,6 +33,15 @@ export class UserController {
     }
   }
 
+  static async sendVerificationCode(req: Request, res: ExpressResponse): Promise<void> {
+    try {
+      const result = await AppLogic.handleSendVerificationCode(req.body);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ code: 500, message: error.message || "Internal server error", data: null });
+    }
+  }
+
   static async getProfile(req: Request, res: ExpressResponse): Promise<void> {
     try {
       const result = await AppLogic.handleGetProfile(req);

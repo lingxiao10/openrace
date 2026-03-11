@@ -112,6 +112,7 @@ export class LeaderboardService {
         r.losses,
         r.draws,
         r.name as robot_name,
+        r.model,
         r.game_type,
         u.username,
         NOW() as snapshotted_at
@@ -136,6 +137,7 @@ export class LeaderboardService {
         COUNT(CASE WHEN m.status = 'finished' AND m.winner_id != r.id AND m.winner_id IS NOT NULL THEN 1 END) as losses,
         COUNT(CASE WHEN m.status = 'finished' AND m.winner_id IS NULL AND m.game_type = 'chess' THEN 1 END) as draws,
         r.name as robot_name,
+        r.model,
         r.game_type,
         u.username,
         NOW() as snapshotted_at
@@ -164,6 +166,7 @@ export class LeaderboardService {
         COUNT(CASE WHEN m.status = 'finished' AND m.winner_id != r.id AND m.winner_id IS NOT NULL THEN 1 END) as losses,
         COUNT(CASE WHEN m.status = 'finished' AND m.winner_id IS NULL AND m.game_type = 'chess' THEN 1 END) as draws,
         r.name as robot_name,
+        r.model,
         r.game_type,
         u.username,
         NOW() as snapshotted_at

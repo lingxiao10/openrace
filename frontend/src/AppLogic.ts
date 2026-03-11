@@ -68,6 +68,19 @@ export class AppLogic {
     );
   }
 
+  static async onSendVerificationCode(container: HTMLElement): Promise<void> {
+    const emailInput = container.querySelector<HTMLInputElement>("input[name='email']");
+    const btn = container.querySelector<HTMLButtonElement>("#send-code-btn");
+    if (!emailInput || !btn) return;
+    AppLogic.setSendCodeBtnLoading(btn, true);
+    await Comm.post(
+      "/api/user/send-code",
+      { email: emailInput.value },
+      () => { AppLogic.handleSendCodeSuccess(btn); },
+      (res: { message: string }) => { AppLogic.handleSendCodeError(btn, res); }
+    );
+  }
+
   static onLogout(): void {
     AppLogic.clearSession();
     Router.navigate("/login");
@@ -254,6 +267,23 @@ export class AppLogic {
 
   private static handleApiError(res: { message: string }): void {
     Toast.error(res.message);
+  }
+
+  private static handleSendCodeSuccess(btn: HTMLButtonElement): void {
+    Toast.success(Trans.t("user.code_sent", "验证码已发送"));
+    AppLogic.setSendCodeBtnLoading(btn, false);
+  }
+
+  private static handleSendCodeError(btn: HTMLButtonElement, res: { message: string }): void {
+    Toast.error(res.message);
+    AppLogic.setSendCodeBtnLoading(btn, false);
+  }
+
+  private static setSendCodeBtnLoading(btn: HTMLButtonElement, loading: boolean): void {
+    btn.disabled = loading;
+    btn.textContent = loading
+      ? Trans.t("user.sending", "发送中...")
+      : Trans.t("user.send_code", "发送验证码");
   }
 
   private static handleProfileForDashboard(res: { data: unknown }): void {

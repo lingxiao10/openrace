@@ -22,6 +22,7 @@ interface LeaderboardRow {
   losses: number;
   draws: number;
   game_type?: string;
+  model?: string;
 }
 
 export class LeaderboardPage {
@@ -108,6 +109,7 @@ export class LeaderboardPage {
     <th>#</th>
     <th>${Trans.t("robot.name")}</th>
     <th>${Trans.t("user.username")}</th>
+    <th>${Trans.t("robot.model", "模型")}</th>
     <th>${Trans.t("leaderboard.points")}</th>
     <th>${Trans.t("leaderboard.wins")}</th>
     <th>${Trans.t("leaderboard.losses")}</th>
@@ -119,6 +121,7 @@ export class LeaderboardPage {
       <td>${r.rank_position}</td>
       <td>${r.robot_name}</td>
       <td>${r.username}</td>
+      <td><span style="font-size:0.8em;color:#888;">${r.model || '-'}</span></td>
       <td><strong>${r.points || 0}</strong></td>
       <td>${r.wins}</td>
       <td>${r.losses}</td>

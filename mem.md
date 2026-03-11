@@ -282,6 +282,21 @@ cd frontend && npm install && npm run dev
 - 逻辑：localStorage 存储 `hasSeenWelcome`，点击"知道了"后不再显示
 - 国际化：zh "让AI为你赢得奖金" / en "Let AI Win Prizes for You"
 
+### 邮箱验证码注册（2026-03-12）
+- `secret_json.json` 已在 `.gitignore` 中，`secret_json_default.json` 为空白模板（字段有值）
+- `need_check_email`：`secret_json.json` = true，`secret_json_default.json` = false
+- `config.ts` 增加 `needCheckEmail: boolean`，暴露给前端 init payload（`need_check_email`）
+- `VerificationCodeTool.ts`：内存存储验证码，`generate(email)` / `verify(email, code)`，10分钟过期
+- `EmailTool.sendVerificationCode(email, code)` 发送HTML格式验证码邮件
+- 路由：`POST /api/user/send-code` → `AppLogic.handleSendVerificationCode`
+- 注册流程：`need_check_email=true` 时验证码必填；`false` 时只验证邮箱格式+唯一性
+- 前端：`RegisterPage` 根据 `Config.get("need_check_email")` 动态显示发送验证码按钮和输入框
+- `AppLogic.onSendVerificationCode(container)` 处理发送逻辑，按钮有loading状态
+
+### 排行榜显示模型（2026-03-12）
+- 后端3个排行榜查询（getAllTime/Weekly/Daily）均增加 `r.model` 字段
+- 前端 `LeaderboardRow` 接口增加 `model?` 字段，表格新增"模型"列（使用 `robot.model` 翻译键）
+
 ### 排行榜按游戏类型分类（2026-03-09）
 - 新增游戏类型tab：全部游戏、国际象棋、斗地主
 - 前端过滤并重新排名：`LeaderboardPage` 增加 `currentGameType` 和 `cachedData`

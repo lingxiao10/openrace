@@ -12,6 +12,7 @@ interface SecretJson {
   resend_api_key?: string;
   resend_from?: string;
   encryption_salt?: string;
+  need_check_email?: boolean;
 }
 
 function loadSecrets(): SecretJson {
@@ -88,6 +89,7 @@ export interface Config {
   log: LogConfig;
   game: GameConfig;
   encryptionSalt: string;
+  needCheckEmail: boolean;
 }
 
 const config: Config = {
@@ -137,6 +139,7 @@ const config: Config = {
     maxMatchesPerRobotPerDay: 30,
   },
   encryptionSalt: secrets.encryption_salt || "openrace",
+  needCheckEmail: secrets.need_check_email ?? false,
 };
 
 export default config;
