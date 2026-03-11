@@ -44,10 +44,11 @@ export class DashboardPage {
     const statsEl = this.container.querySelector("#stats-grid");
     if (statsEl) {
       statsEl.innerHTML = `
-        <div class="stat-card">
+        <!-- balance hidden: users use their own API key -->
+        <!-- <div class="stat-card">
           <div class="stat-label">${Trans.t("balance.label", "Balance")}</div>
           <div class="stat-value">$${Number(user?.balance ?? 0).toFixed(4)}</div>
-        </div>
+        </div> -->
         <div class="stat-card">
           <div class="stat-label">${Trans.t("robot.count", "Robots")}</div>
           <div class="stat-value">${robots?.length ?? 0}</div>
