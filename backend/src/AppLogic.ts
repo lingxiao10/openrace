@@ -27,6 +27,7 @@ import { LeaderboardService } from "./services/LeaderboardService";
 import { BalanceService } from "./services/BalanceService";
 import { SettingsService } from "./services/SettingsService";
 import { StatsService } from "./services/StatsService";
+import { AdminService } from "./services/AdminService";
 import config from "./config/config";
 import { PROVIDERS } from "./config/providers";
 
@@ -54,7 +55,10 @@ export class AppLogic {
     if (!result) return Response.error(401, "user.wrong_password");
     AppLogic.pushLoginActions();
     LogCenter.info("AppLogic", `User login: ${result.user.username}`);
-    return Response.success(result, "user.login_success");
+    return Response.success({
+      ...result,
+      is_admin: config.adminEmails.includes(result.user.email),
+    }, "user.login_success");
   }
 
   static async handleUserRegister(body: Record<string, string>): Promise<StandardResponse<unknown>> {
@@ -300,6 +304,28 @@ export class AppLogic {
 
   static async handleGetTicks(_req: Request): Promise<StandardResponse<unknown>> {
     return Response.success(await StatsService.getEnrichedTicks());
+  }
+
+  // ----------------------------------------------------------------
+  // ADMIN
+  // ----------------------------------------------------------------
+
+  static async handleAdminGetUsers(req: Request): Promise<StandardResponse<unknown>> {
+    if (!AppLogic.extractUserId(req)) return Response.unauthorized();
+    const user = await UserService.findById(AppLogic.extractUserId(req)!);
+    if (!user || !config.adminEmails.includes(user.email)) return Response.error(403, "admin.forbidden");
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = 100;
+    return Response.success(await AdminService.getUserList(page, limit));
+  }
+
+  static async handleAdminGetRobots(req: Request): Promise<StandardResponse<unknown>> {
+    if (!AppLogic.extractUserId(req)) return Response.unauthorized();
+    const user = await UserService.findById(AppLogic.extractUserId(req)!);
+    if (!user || !config.adminEmails.includes(user.email)) return Response.error(403, "admin.forbidden");
+    const page = Math.max(1, Number(req.query.page) || 1);
+    const limit = 100;
+    return Response.success(await AdminService.getRobotList(page, limit));
   }
 
   // ----------------------------------------------------------------

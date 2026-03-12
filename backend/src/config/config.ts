@@ -13,6 +13,7 @@ interface SecretJson {
   resend_from?: string;
   encryption_salt?: string;
   need_check_email?: boolean;
+  admin_emails?: string[];
 }
 
 function loadSecrets(): SecretJson {
@@ -90,6 +91,7 @@ export interface Config {
   game: GameConfig;
   encryptionSalt: string;
   needCheckEmail: boolean;
+  adminEmails: string[];
 }
 
 const config: Config = {
@@ -140,6 +142,7 @@ const config: Config = {
   },
   encryptionSalt: secrets.encryption_salt || "openrace",
   needCheckEmail: secrets.need_check_email ?? false,
+  adminEmails: secrets.admin_emails ?? [],
 };
 
 export default config;

@@ -172,13 +172,13 @@ export class DoudizhuTool {
     // 连对 (3+对连续)
     if (cards.length >= 6 && cards.length % 2 === 0) {
       const allPairs = Object.values(counts).every(c => c === 2);
-      if (allPairs && this.isStraight(uniqueCards)) return 'pair_straight';
+      if (allPairs && uniqueCards.length >= 3 && this.isConsecutive(uniqueCards)) return 'pair_straight';
     }
 
     // 飞机 (2+个三张连续)
     if (cards.length >= 6 && cards.length % 3 === 0) {
       const allTriples = Object.values(counts).every(c => c === 3);
-      if (allTriples && this.isStraight(uniqueCards)) return 'plane';
+      if (allTriples && uniqueCards.length >= 2 && this.isConsecutive(uniqueCards)) return 'plane';
     }
 
     return null;  // 非法牌型
@@ -341,6 +341,18 @@ export class DoudizhuTool {
   private static isStraight(cards: string[]): boolean {
     if (cards.length < 5) return false;
 
+    // 不能包含2和王
+    if (cards.some(c => ['2', 'X', 'D'].includes(c))) return false;
+
+    const values = cards.map(c => this.CARD_VALUES[c]).sort((a, b) => a - b);
+    for (let i = 1; i < values.length; i++) {
+      if (values[i] !== values[i - 1] + 1) return false;
+    }
+    return true;
+  }
+
+  // 检查uniqueCards是否连续 (用于飞机/连对, 不要求5张以上)
+  private static isConsecutive(cards: string[]): boolean {
     // 不能包含2和王
     if (cards.some(c => ['2', 'X', 'D'].includes(c))) return false;
 

@@ -26,10 +26,10 @@ export class GamePage {
     this.matchId = Number(params.id);
     this.container.innerHTML = this.renderSkeleton();
     this.bindControls();
-    AppLogic.loadMatch(this.matchId);
-    AppLogic.loadMatchMoves(this.matchId);
     EventTool.on("match_loaded", (d) => this.renderMatchInfo(d as Record<string, unknown>));
     EventTool.on("match_moves_loaded", (d) => this.renderMoves(d as Array<Record<string, unknown>>));
+    AppLogic.loadMatch(this.matchId);
+    AppLogic.loadMatchMoves(this.matchId);
     this.startPolling();
   }
 

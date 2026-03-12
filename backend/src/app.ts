@@ -15,6 +15,7 @@ import { LeaderboardController } from "./controllers/LeaderboardController";
 import { SettingsController } from "./controllers/SettingsController";
 import { LogController } from "./controllers/LogController";
 import { StatsController } from "./controllers/StatsController";
+import { AdminController } from "./controllers/AdminController";
 import { GameScheduler } from "./scheduler/GameScheduler";
 import { AppLogic } from "./AppLogic";
 import config from "./config/config";
@@ -68,6 +69,10 @@ app.post(`${api}/settings`,    SettingsController.saveSettings);
 // ---- Stats / Game Center ----
 app.get(`${api}/stats`,       StatsController.getStats);
 app.get(`${api}/stats/ticks`, StatsController.getTicks);
+
+// ---- Admin ----
+app.get(`${api}/admin/users`,  AdminController.getUsers);
+app.get(`${api}/admin/robots`, AdminController.getRobots);
 
 // ---- Logs ----
 app.get(`${api}/logs`, LogController.getLogs);

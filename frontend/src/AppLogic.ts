@@ -189,6 +189,18 @@ export class AppLogic {
   }
 
   // ----------------------------------------------------------------
+  // ADMIN
+  // ----------------------------------------------------------------
+
+  static async loadAdminUsers(page: number): Promise<void> {
+    await Comm.get(`/api/admin/users?page=${page}`, AppLogic.handleAdminUsersLoaded);
+  }
+
+  static async loadAdminRobots(page: number): Promise<void> {
+    await Comm.get(`/api/admin/robots?page=${page}`, AppLogic.handleAdminRobotsLoaded);
+  }
+
+  // ----------------------------------------------------------------
   // BALANCE & SETTINGS
   // ----------------------------------------------------------------
 
@@ -254,6 +266,7 @@ export class AppLogic {
     const data = res.data as Record<string, any>;
     AppLogic.saveToken(data?.token);
     AppLogic.saveUserId(data?.user?.id);
+    AppLogic.saveIsAdmin(Boolean(data?.is_admin));
     AppLogic.applyStoredToken();
     Toast.success(Trans.t("user.login_success", "Login successful"));
     document.dispatchEvent(new CustomEvent("user_logged_in"));
@@ -357,6 +370,14 @@ export class AppLogic {
     EventTool.emit("logs_loaded", res.data);
   }
 
+  private static handleAdminUsersLoaded(res: { data: unknown }): void {
+    EventTool.emit("admin_users_loaded", res.data);
+  }
+
+  private static handleAdminRobotsLoaded(res: { data: unknown }): void {
+    EventTool.emit("admin_robots_loaded", res.data);
+  }
+
   private static handleBalanceLoaded(res: { data: unknown }): void {
     EventTool.emit("balance_loaded", res.data);
   }
@@ -372,6 +393,7 @@ export class AppLogic {
   private static clearSession(): void {
     StorageTool.remove("token");
     StorageTool.remove("user_id");
+    StorageTool.remove("is_admin");
     HttpTool.removeHeader("Authorization");
   }
 
@@ -381,6 +403,14 @@ export class AppLogic {
 
   private static saveUserId(userId: number): void {
     StorageTool.set("user_id", String(userId));
+  }
+
+  private static saveIsAdmin(isAdmin: boolean): void {
+    StorageTool.set("is_admin", isAdmin ? "1" : "0");
+  }
+
+  static isAdmin(): boolean {
+    return StorageTool.get<string>("is_admin") === "1";
   }
 
   static getUserId(): number | null {
