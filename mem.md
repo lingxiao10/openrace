@@ -385,6 +385,12 @@ cd frontend && npm install && npm run dev
 - 导航栏新增 `nav-admin` 链接，仅 isAdmin 时显示
 - i18n：`nav.admin`, `admin.*` 系列翻译键（zh + en）
 
+### AdminService LIMIT/OFFSET 修复（2026-03-12）
+- **问题**：`GET /api/admin/users` 和 `/api/admin/robots` 返回 500，错误为 `Incorrect arguments to mysqld_stmt_execute`
+- **根因**：mysql2 的 `execute()`（预处理语句）对 `LIMIT ? OFFSET ?` 参数绑定存在 bug
+- **修复**：将 LIMIT/OFFSET 直接嵌入 SQL 模板字符串（`LIMIT ${limitInt} OFFSET ${offsetInt}`），值经 `Math.trunc()` 保证为整数，无注入风险
+- **涉及文件**：`AdminService.ts`（两处查询）、`AdminController.ts`（增加错误日志）
+
 ### 开源准备（2026-03-09）
 - **协议设置**: 添加了 `Apache License 2.0`。
 - **文档维护**: 创建了英文版 `README.md` (默认) 和中文版 `README_ZH.md`。顶部互相链接切换语言，含徽章、功能列表、技术栈、快速开始、架构说明。
