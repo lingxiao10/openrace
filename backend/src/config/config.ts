@@ -9,6 +9,7 @@ import path from "path";
 interface SecretJson {
   db?: { host?: string; port?: number; user?: string; password?: string; database?: string };
   openrouter_api_key?: string;
+  ark_api_key?: string;
   resend_api_key?: string;
   resend_from?: string;
   encryption_salt?: string;
@@ -78,6 +79,8 @@ export interface GameConfig {
   initialBalance: number;
   openRouterBaseUrl: string;
   platformApiKey: string;
+  arkBaseUrl: string;
+  platformArkApiKey: string;
   maxMovesPerMatch: number;
   robotMaxPerUser: number;
   maxMatchesPerRobotPerDay: number;
@@ -136,6 +139,8 @@ const config: Config = {
     initialBalance: 5.00,
     openRouterBaseUrl: "https://openrouter.ai/api/v1",
     platformApiKey: secrets.openrouter_api_key || process.env.OPENROUTER_KEY || "",
+    arkBaseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    platformArkApiKey: secrets.ark_api_key || process.env.ARK_API_KEY || "",
     maxMovesPerMatch: 200,
     robotMaxPerUser: 5,
     maxMatchesPerRobotPerDay: 30,

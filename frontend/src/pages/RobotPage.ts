@@ -39,7 +39,7 @@ export class RobotPage {
   };
 
   private populateProviders(): void {
-    const providers = (window as any).__sync_providers as Array<{ id: string; name: string; models: Array<{ id: string; name: string }>; topUpUrl?: string }> | undefined;
+    const providers = (window as any).__sync_providers as Array<{ id: string; name: string; isPlatformFree?: boolean; models: Array<{ id: string; name: string }>; topUpUrl?: string; supportsCustomModel?: boolean }> | undefined;
     if (!providers || !Array.isArray(providers)) {
       console.warn("Providers not loaded yet");
       return;
@@ -51,6 +51,9 @@ export class RobotPage {
     const baseUrlGroup = document.getElementById("base-url-group") as HTMLDivElement;
     const baseUrlInput = document.getElementById("base-url-input") as HTMLInputElement;
     const topupLink = document.getElementById("provider-topup-link") as HTMLAnchorElement;
+    const apiKeyGroup = document.getElementById("api-key-group") as HTMLDivElement;
+    const modelGroup = document.getElementById("model-group") as HTMLDivElement;
+    const freeModelLabel = document.getElementById("free-model-label") as HTMLDivElement;
 
     if (!providerSelect || !modelSelect || !customModelInput || !baseUrlGroup || !baseUrlInput) return;
 
@@ -69,6 +72,21 @@ export class RobotPage {
       customModelInput.style.display = "none";
       customModelInput.value = "";
       modelSelect.removeAttribute("disabled");
+
+      // Handle ark-free: platform provides the key for free
+      if (providerSelect.value === "ark-free") {
+        if (apiKeyGroup) apiKeyGroup.style.display = "none";
+        if (modelGroup) modelGroup.style.display = "none";
+        if (freeModelLabel) freeModelLabel.style.display = "block";
+        baseUrlGroup.style.display = "none";
+        topupLink.style.display = "none";
+        return;
+      }
+
+      // Restore API key field for non-free providers
+      if (apiKeyGroup) apiKeyGroup.style.display = "block";
+      if (modelGroup) modelGroup.style.display = "block";
+      if (freeModelLabel) freeModelLabel.style.display = "none";
 
       // Handle OpenAI Compatible special case
       if (providerSelect.value === "openai-compatible") {
@@ -98,11 +116,13 @@ export class RobotPage {
           modelSelect.appendChild(option);
         });
 
-        // Add "Custom" option
-        const customOption = document.createElement("option");
-        customOption.value = "__custom__";
-        customOption.textContent = Trans.t("robot.custom_model", "Custom");
-        modelSelect.appendChild(customOption);
+        // Add "Custom" option only if provider supports custom models
+        if (selectedProvider.supportsCustomModel !== false) {
+          const customOption = document.createElement("option");
+          customOption.value = "__custom__";
+          customOption.textContent = Trans.t("robot.custom_model", "Custom");
+          modelSelect.appendChild(customOption);
+        }
 
         if (selectedProvider.topUpUrl) {
           topupLink.href = selectedProvider.topUpUrl;
@@ -184,17 +204,23 @@ export class RobotPage {
         <input type="text" name="base_url" id="base-url-input" placeholder="https://api.example.com/v1" />
         <small style="color: #7f8c8d; font-size: 11px;">${Trans.t("robot.base_url_hint", "Custom API endpoint for OpenAI-compatible services")}</small>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="api-key-group">
         <label>${Trans.t("robot.api_key", "API Key")}</label>
-        <input type="password" name="api_key" required placeholder="${Trans.t("robot.api_key_placeholder", "Enter your API key")}" />
+        <input type="password" name="api_key" placeholder="${Trans.t("robot.api_key_placeholder", "Enter your API key")}" />
         <small style="color: #7f8c8d; font-size: 11px;">${Trans.t("robot.api_key_hint", "Your API key is encrypted and stored securely. Cannot be modified after creation.")}</small>
       </div>
-      <div class="form-group">
+      <div class="form-group" id="model-group">
         <label>${Trans.t("robot.model", "AI Model")}</label>
-        <select name="model" id="model-select" required>
+        <select name="model" id="model-select">
           <option value="">${Trans.t("robot.select_model", "Select Model")}</option>
         </select>
         <input type="text" id="custom-model-input" name="custom_model" placeholder="${Trans.t("robot.custom_model_placeholder", "Enter custom model name")}" style="display: none; margin-top: 8px;" />
+      </div>
+      <div class="form-group" id="free-model-label" style="display:none;">
+        <label>${Trans.t("robot.model", "AI Model")}</label>
+        <div style="padding: 8px 12px; background: #eafaf1; border: 1px solid #2ecc71; border-radius: 6px; font-size: 13px; color: #27ae60;">
+          ✅ Doubao Seed 2.0 Mini — ${Trans.t("robot.free_provided", "免费，由平台提供")}
+        </div>
       </div>
       <div class="form-group">
         <label id="strategy-label">${Trans.t("robot.chess_strategy", "Chess Strategy")}</label>
@@ -263,16 +289,26 @@ export class RobotPage {
       const customModelInput = document.getElementById("custom-model-input") as HTMLInputElement;
       const providerSelect = document.getElementById("provider-select") as HTMLSelectElement;
 
+      // ark-free: inject fixed model value so form data is complete
+      if (providerSelect.value === "ark-free") {
+        let hiddenModel = form.querySelector<HTMLInputElement>('input[name="model"]');
+        if (!hiddenModel) {
+          hiddenModel = document.createElement("input");
+          hiddenModel.type = "hidden";
+          hiddenModel.name = "model";
+          form.appendChild(hiddenModel);
+        }
+        hiddenModel.value = "doubao-seed-2-0-mini-260215";
+        AppLogic.onCreateRobot(form);
+        return;
+      }
+
       // If custom model is selected, use the custom input value
       if ((modelSelect.value === "__custom__" || providerSelect.value === "openai-compatible") && customModelInput.value.trim()) {
-        const modelInput = form.querySelector<HTMLSelectElement>('select[name="model"]');
-        if (modelInput) {
-          // Temporarily set the value to the custom model name
-          const customOption = document.createElement("option");
-          customOption.value = customModelInput.value.trim();
-          customOption.selected = true;
-          modelSelect.appendChild(customOption);
-        }
+        const customOption = document.createElement("option");
+        customOption.value = customModelInput.value.trim();
+        customOption.selected = true;
+        modelSelect.appendChild(customOption);
       }
 
       AppLogic.onCreateRobot(form);

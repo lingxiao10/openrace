@@ -16,10 +16,36 @@ export interface Provider {
   requiresApiKey: boolean;
   supportsCustomModel: boolean;
   topUpUrl?: string; // 充值链接
+  isPlatformFree?: boolean; // 平台免费提供，用户无需填写 API key
   models: ProviderModel[];
 }
 
 export const PROVIDERS: Provider[] = [
+  {
+    id: "ark-free",
+    name: "Ark 免费 (平台提供)",
+    baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    requiresApiKey: false,
+    supportsCustomModel: false,
+    isPlatformFree: true,
+    models: [
+      { id: "doubao-seed-2-0-mini-260215", name: "Doubao Seed 2.0 Mini (免费)" },
+    ],
+  },
+  {
+    id: "ark",
+    name: "Ark (火山引擎)",
+    baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
+    requiresApiKey: true,
+    supportsCustomModel: false,
+    topUpUrl: "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D",
+    models: [
+      { id: "doubao-seed-2-0-pro-260215", name: "Doubao Seed 2.0 Pro" },
+      { id: "doubao-seed-2-0-lite-260215", name: "Doubao Seed 2.0 Lite" },
+      { id: "doubao-seed-2-0-mini-260215", name: "Doubao Seed 2.0 Mini" },
+      { id: "doubao-seed-1-8-251228", name: "Doubao Seed 1.8" },
+    ],
+  },
   {
     id: "openrouter",
     name: "OpenRouter",

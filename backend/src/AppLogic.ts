@@ -121,31 +121,41 @@ export class AppLogic {
     if (await RobotService.checkNameExists(req.body.name))
       return Response.error(409, "robot.name_exists");
 
-    // 验证provider和api_key
-    if (!req.body.provider || !req.body.api_key) {
+    // 验证provider
+    if (!req.body.provider) {
       return Response.error(400, "robot.provider_required");
     }
 
-    // 测试API是否可用
-    const testResult = await AppLogic.testRobotApi(req.body.api_key, req.body.model, req.body.provider, req.body.base_url);
+    const isFree = req.body.provider === "ark-free";
+
+    // 非平台免费 provider 必须提供 api_key
+    if (!isFree && !req.body.api_key) {
+      return Response.error(400, "robot.provider_required");
+    }
+
+    // 测试API是否可用（免费使用平台 key 测试）
+    const testApiKey = isFree ? config.game.platformArkApiKey : req.body.api_key;
+    const testBaseUrl = isFree ? config.game.arkBaseUrl : req.body.base_url;
+    const testModel = isFree ? "doubao-seed-2-0-mini-260215" : req.body.model;
+    const testResult = await AppLogic.testRobotApi(testApiKey, testModel, req.body.provider, testBaseUrl);
     if (!testResult.success) {
       return Response.error(400, testResult.error || "robot.api_test_failed");
     }
 
     const gameType = req.body.game_type === "doudizhu" ? "doudizhu" : "chess";
 
-    // 加密API密钥
-    const apiKeyEncrypted = EncryptTool.encrypt(req.body.api_key);
+    // 加密API密钥（免费 provider 存空字符串）
+    const apiKeyEncrypted = isFree ? "" : EncryptTool.encrypt(req.body.api_key);
 
     await RobotService.create(
       AppLogic.extractUserId(req)!,
       req.body.name,
-      req.body.model ?? config.game.defaultModel,
+      isFree ? "doubao-seed-2-0-mini-260215" : (req.body.model ?? config.game.defaultModel),
       req.body.strategy ?? null,
       gameType,
       req.body.provider,
       apiKeyEncrypted,
-      req.body.base_url ?? null
+      isFree ? null : (req.body.base_url ?? null)
     );
     Action.success(Trans.t("robot.created"));
     Action.navigate("/robots");
@@ -218,7 +228,9 @@ export class AppLogic {
         { role: "system" as const, content: "You are a test assistant." },
         { role: "user" as const, content: "请直接输出数字：1" }
       ];
-      const result = await OpenRouterTool.callChat(apiKey, model, messages, 10000, baseUrl);
+      const isArk = provider === "ark" || provider === "ark-free";
+      const extraBody = isArk ? { thinking: { type: "disabled" } } : undefined;
+      const result = await OpenRouterTool.callChat(apiKey, model, messages, 10000, baseUrl, extraBody);
       if (!result || !result.content || result.content.trim().length === 0) {
         return { success: false, error: "robot.api_no_response" };
       }

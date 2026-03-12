@@ -149,11 +149,7 @@ export class GameService {
         const black = await RobotService.findById(match.robot_black_id);
         if (!white || !black) return;
 
-        // 解密API密钥
-        const whiteKey = white.api_key_encrypted ? EncryptTool.decrypt(white.api_key_encrypted) : "";
-        const blackKey = black.api_key_encrypted ? EncryptTool.decrypt(black.api_key_encrypted) : "";
-
-        await GameService.playChessGame(matchId, white, black, whiteKey, blackKey);
+        await GameService.playChessGame(matchId, white, black);
       } else if (match.game_type === "doudizhu") {
         const player1 = await RobotService.findById(match.robot_white_id);
         const player2 = await RobotService.findById(match.robot_black_id);
@@ -169,9 +165,7 @@ export class GameService {
   private static async playChessGame(
     matchId: number,
     white: RobotRow,
-    black: RobotRow,
-    whiteKey: string,
-    blackKey: string
+    black: RobotRow
   ): Promise<void> {
     const logPath = MatchLogTool.getLogPath(matchId, "chess");
 
@@ -205,7 +199,7 @@ export class GameService {
     for (let moveNum = startMoveNum; moveNum <= config.game.maxMovesPerMatch; moveNum++) {
       const isWhiteTurn = ChessTool.getTurn(fen) === "w";
       const robot = isWhiteTurn ? white : black;
-      const apiKey = isWhiteTurn ? whiteKey : blackKey;
+      const { apiKey, baseUrl, extraBody } = GameService.resolveRobotApiParams(robot);
 
       const legalMoves = ChessTool.getLegalMoves(fen);
       MatchLogTool.log(logPath, `\n--- Move ${moveNum} (${isWhiteTurn ? 'White' : 'Black'}: ${robot.name}) ---`);
@@ -222,7 +216,7 @@ export class GameService {
           fen, moveHistory, robot.strategy ?? "", legalMoves, lastError
         );
 
-        aiResult = await GameService.callChatWithRetry(apiKey, robot.model, messages, robot.id);
+        aiResult = await GameService.callChatWithRetry(apiKey, robot.model, messages, robot.id, baseUrl, extraBody);
 
         if (!aiResult) {
           lastError = "AI call failed (network/timeout/API error)";
@@ -351,8 +345,7 @@ export class GameService {
       const currentPlayer = players[state.currentPlayerIdx];
       const role = state.currentPlayerIdx === landlordIdx ? "landlord" : "farmer";
 
-      // 解密当前玩家的API密钥
-      const apiKey = currentPlayer.api_key_encrypted ? EncryptTool.decrypt(currentPlayer.api_key_encrypted) : "";
+      const { apiKey, baseUrl, extraBody } = GameService.resolveRobotApiParams(currentPlayer);
 
       // Try up to 12 times to get a valid play from AI
       let finalCards: string[] | null = null;
@@ -372,7 +365,9 @@ export class GameService {
           apiKey,
           currentPlayer.model,
           messages,
-          currentPlayer.id
+          currentPlayer.id,
+          baseUrl,
+          extraBody
         );
 
         if (!aiResult) {
@@ -580,17 +575,30 @@ export class GameService {
     await GameService.forfeitRobot(matchId, loser, winner, "insufficient_balance");
   }
 
+  /** Resolve effective API key, baseUrl, and extraBody for a robot based on its provider */
+  private static resolveRobotApiParams(robot: RobotRow): { apiKey: string; baseUrl?: string; extraBody?: Record<string, unknown> } {
+    const isArk = robot.provider === "ark" || robot.provider === "ark-free";
+    const apiKey = robot.provider === "ark-free"
+      ? config.game.platformArkApiKey
+      : (robot.api_key_encrypted ? EncryptTool.decrypt(robot.api_key_encrypted) : "");
+    const baseUrl = isArk ? config.game.arkBaseUrl : (robot.base_url ?? undefined);
+    const extraBody = isArk ? { thinking: { type: "disabled" } } : undefined;
+    return { apiKey, baseUrl, extraBody };
+  }
+
   /** Call AI with up to 3 retries for network errors, 5s delay between attempts */
   private static async callChatWithRetry(
     apiKey: string,
     model: string,
     messages: ChatMessage[],
-    robotId: number
+    robotId: number,
+    baseUrl?: string,
+    extraBody?: Record<string, unknown>
   ): Promise<AiCallResult | null> {
     const maxAttempts = 3;
     const retryDelayMs = 5000;
     for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      const result = await OpenRouterTool.callChat(apiKey, model, messages).catch((err: Error) => {
+      const result = await OpenRouterTool.callChat(apiKey, model, messages, 30000, baseUrl, extraBody).catch((err: Error) => {
         LogCenter.warn("GameService", `Robot ${robotId} AI call attempt ${attempt}/${maxAttempts} failed: ${err.message}`);
 
         // 检查是否是余额不足错误

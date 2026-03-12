@@ -391,6 +391,23 @@ cd frontend && npm install && npm run dev
 - **修复**：将 LIMIT/OFFSET 直接嵌入 SQL 模板字符串（`LIMIT ${limitInt} OFFSET ${offsetInt}`），值经 `Math.trunc()` 保证为整数，无注入风险
 - **涉及文件**：`AdminService.ts`（两处查询）、`AdminController.ts`（增加错误日志）
 
+### Ark（火山引擎）Provider + 平台免费选项（2026-03-13）
+- `secret_json.json` 新增 `ark_api_key`（平台 key）
+- `config.ts` 新增 `platformArkApiKey` + `arkBaseUrl`（`https://ark.cn-beijing.volces.com/api/v3`）
+- `providers.ts` 新增两个 provider：
+  - `ark-free`：`requiresApiKey:false, isPlatformFree:true`，固定模型 doubao-seed-2-0-mini-260215，无充值链接
+  - `ark`：用户自填 key，4个 doubao-seed 模型，`supportsCustomModel:false`
+- `OpenRouterTool.callChat` 新增 `extraBody?` 参数，Ark 调用时传 `thinking:{type:"disabled"}`
+- `GameService` 新增 `resolveRobotApiParams(robot)`：provider=ark-free 时用平台 key，Ark provider 时用 arkBaseUrl + thinking:disabled
+- `AppLogic.handleCreateRobot`：provider=ark-free 时跳过 api_key 必填、用平台 key 测试、存空字符串
+- `RobotPage.ts`：选 ark-free 时隐藏 API key 输入框和模型选择，显示"免费由平台提供"标签
+
+### AI Prompt 精简（2026-03-12）
+- `OpenRouterTool.buildChessPrompt`：移除冗余规则说明（国际象棋规则AI已知），system prompt 从~450 token压缩至~20 token
+- `OpenRouterTool.buildDoudizhuPrompt`：精简斗地主规则为一行，system prompt 从~500 token压缩至~50 token
+- user content 字段名缩短（FEN→FEN，History/Legal/Hand/Last）
+- 预计每次AI调用节省约70-80%的输入token费用
+
 ### 开源准备（2026-03-09）
 - **协议设置**: 添加了 `Apache License 2.0`。
 - **文档维护**: 创建了英文版 `README.md` (默认) 和中文版 `README_ZH.md`。顶部互相链接切换语言，含徽章、功能列表、技术栈、快速开始、架构说明。

@@ -24,7 +24,8 @@ export class OpenRouterTool {
     model: string,
     messages: ChatMessage[],
     timeoutMs = 30000,
-    baseUrl?: string
+    baseUrl?: string,
+    extraBody?: Record<string, unknown>
   ): Promise<AiCallResult> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeoutMs);
@@ -41,7 +42,7 @@ export class OpenRouterTool {
           "HTTP-Referer": "https://openrace.ai",
           "X-Title": "OpenRace",
         },
-        body: JSON.stringify({ model, messages, max_tokens: 64, temperature: 0.3 }),
+        body: JSON.stringify({ model, messages, max_tokens: 64, temperature: 0.3, ...extraBody }),
         signal: controller.signal,
       });
     } finally {
@@ -78,42 +79,16 @@ export class OpenRouterTool {
     legalMoves: string[],
     previousError?: string
   ): ChatMessage[] {
-    const systemContent = `You are a chess-playing AI. Your strategy: ${strategy || "play solid, standard chess"}.
+    const systemContent = `Chess AI. Strategy: ${strategy || "solid, standard chess"}.
+Output ONLY one UCI move from the legal list (e.g. e2e4, g1f3, e7e8q). No explanation.`;
 
-CHESS RULES (International Chess / FIDE Rules):
-1. Board: 8×8 grid, files a-h (left to right), ranks 1-8 (bottom to top for White).
-2. Pieces: King (K), Queen (Q), Rook (R), Bishop (B), Knight (N), Pawn (no letter).
-3. Movement:
-   - King: one square in any direction (including diagonals).
-   - Queen: any number of squares in straight lines or diagonals.
-   - Rook: any number of squares horizontally or vertically.
-   - Bishop: any number of squares diagonally.
-   - Knight: L-shape (2 squares in one direction + 1 square perpendicular), can jump over pieces.
-   - Pawn: moves forward one square (or two from starting position), captures diagonally forward one square.
-4. Special moves:
-   - Castling: King moves two squares toward a Rook, Rook jumps over. Conditions: neither piece has moved, no pieces between them, King not in check, King doesn't pass through or land on attacked square.
-   - En passant: if opponent's pawn moves two squares forward and lands beside your pawn, you can capture it as if it moved only one square (must be done immediately).
-   - Promotion: when a pawn reaches the opposite end (rank 8 for White, rank 1 for Black), it must be promoted to Q/R/B/N.
-5. Check & Checkmate: King is in check if attacked. Must escape check. Checkmate = no legal move to escape check (you lose).
-6. Stalemate: if it's your turn and you have no legal moves but are NOT in check, the game is a draw.
-7. Draw conditions: stalemate, insufficient material, threefold repetition, fifty-move rule, mutual agreement.
-
-OUTPUT FORMAT:
-- Respond with ONLY a single UCI move in lowercase (e.g., e2e4, g1f3, e7e8q for pawn promotion to queen).
-- UCI format: <from_square><to_square>[promotion_piece]
-- Examples: e2e4 (pawn advance), e1g1 (kingside castling for White), e7e8q (pawn promotion to queen).
-- Do NOT include any explanation, commentary, or extra text. ONLY the move.`;
-
-    let userContent = `Current position (FEN): ${fen}
-Move history: ${moveHistory.length ? moveHistory.join(" ") : "none"}
-Legal moves: ${legalMoves.join(", ")}`;
+    let userContent = `FEN: ${fen}
+History: ${moveHistory.length ? moveHistory.join(" ") : "-"}
+Legal: ${legalMoves.join(",")}`;
 
     if (previousError) {
-      userContent += `\n\n⚠️ PREVIOUS ATTEMPT REJECTED: ${previousError}
-Please output a LEGAL move from the list above. Double-check the rules.`;
+      userContent += `\nREJECTED: ${previousError} — pick a LEGAL move.`;
     }
-
-    userContent += "\nYour move:";
 
     return [
       { role: "system", content: systemContent },
@@ -136,59 +111,17 @@ Please output a LEGAL move from the list above. Double-check the rules.`;
     strategy: string,
     previousError?: string
   ): ChatMessage[] {
-    const systemContent = `You are playing Doudizhu (斗地主), a 3-player Chinese card game. Your role: ${role}.
-Your strategy: ${strategy || "play smart, win the game"}.
+    const systemContent = `Doudizhu AI. Role: ${role}. Strategy: ${strategy || "play smart, win"}.
+Cards(asc): 3<4<5<6<7<8<9<T<J<Q<K<A<2<X<D. Valid: single,pair,triple,triple+1,triple+pair,straight(5+),pair-straight(3+pairs),plane(2+triples),bomb(4-same),rocket(X+D).
+Beat: same type+higher, or bomb>any, or rocket>all. Pass if unwilling/unable.
+Output ONLY comma-separated cards (e.g. 7,7 or 3,4,5,6,7) or "pass". No explanation.`;
 
-DOUDIZHU RULES (斗地主规则):
-1. Players: 3 players - 1 landlord (地主) vs 2 farmers (农民)
-2. Cards: 54 cards total (4 suits × 13 ranks + 2 jokers)
-3. Card values (low to high): 3, 4, 5, 6, 7, 8, 9, T(10), J, Q, K, A, 2, X(小王/small joker), D(大王/big joker)
-4. Goal:
-   - Landlord wins if they play all their cards first
-   - Farmers win if either farmer plays all their cards first
-5. Turn order: Players take turns clockwise. Landlord starts first.
-
-VALID PLAY TYPES:
-- Single: one card (e.g., "5")
-- Pair: two same cards (e.g., "7,7")
-- Triple: three same cards (e.g., "K,K,K")
-- Triple + Single: three same + one different (e.g., "K,K,K,5")
-- Triple + Pair: three same + one pair (e.g., "K,K,K,7,7")
-- Straight: 5+ consecutive singles (e.g., "3,4,5,6,7") - cannot include 2, X, or D
-- Pair straight: 3+ consecutive pairs (e.g., "3,3,4,4,5,5") - cannot include 2, X, or D
-- Plane: 2+ consecutive triples (e.g., "3,3,3,4,4,4") - cannot include 2, X, or D
-- Bomb: four same cards (e.g., "A,A,A,A") - beats everything except rocket
-- Rocket: both jokers (X,D) - beats everything
-
-PLAY RULES:
-- If you lead (no last play), you can play ANY valid combination from your hand
-- If there's a last play, you must:
-  * Beat it with the SAME TYPE and HIGHER value, OR
-  * Use a bomb (beats any non-bomb/non-rocket), OR
-  * Use a rocket (beats everything)
-- You can "pass" if you cannot or don't want to play
-- After 2 consecutive passes, the last player who played leads the next round
-
-BEATING RULES:
-- Same type: compare the main card value (e.g., pair 8,8 beats pair 7,7)
-- Bomb beats any non-bomb (except rocket)
-- Rocket beats everything
-- Different types cannot beat each other (except bomb/rocket)
-
-OUTPUT FORMAT:
-- Respond with ONLY comma-separated cards (e.g., "3,3,3" or "5,6,7,8,9") OR "pass"
-- Cards must be from your hand
-- NO explanation, NO extra text, NO quotes`;
-
-    let userContent = `Your hand: ${hand.sort((a, b) => this.CARD_VALUES[a] - this.CARD_VALUES[b]).join(", ")}
-Last play: ${lastPlay ? lastPlay.cards.join(", ") : "none (you lead)"}`;
+    let userContent = `Hand: ${hand.sort((a, b) => this.CARD_VALUES[a] - this.CARD_VALUES[b]).join(",")}
+Last: ${lastPlay ? lastPlay.cards.join(",") : "none(you lead)"}`;
 
     if (previousError) {
-      userContent += `\n\n⚠️ PREVIOUS ATTEMPT REJECTED: ${previousError}
-Please output a VALID play from your hand. Double-check the rules and your hand.`;
+      userContent += `\nREJECTED: ${previousError} — play VALID cards from hand.`;
     }
-
-    userContent += "\nYour action:";
 
     return [
       { role: "system", content: systemContent },
