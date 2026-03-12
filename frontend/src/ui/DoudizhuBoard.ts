@@ -57,9 +57,9 @@ export class DoudizhuBoard {
       html += `<span class="thinking-indicator">${Trans.t("game.thinking", "思考中...")}</span>`;
     }
     html += '</div>';
-    html += '<div class="card-row">';
+    html += '<div class="dz-card-row">';
     hands[landlordIdx].forEach((card: string) => {
-      html += `<span class="card">${this.formatCard(card)}</span>`;
+      html += `<span class="dz-card">${this.formatCard(card)}</span>`;
     });
     html += '</div>';
 
@@ -73,7 +73,7 @@ export class DoudizhuBoard {
         const cards = lastMoveAction.split(',').filter((c: string) => c.length > 0);
         html += '<span class="round-play-badge">';
         cards.forEach((card: string) => {
-          html += `<span class="card card-small">${this.formatCard(card)}</span>`;
+          html += `<span class="dz-card dz-card-small">${this.formatCard(card)}</span>`;
         });
         html += '</span>';
       }
@@ -98,9 +98,9 @@ export class DoudizhuBoard {
         html += `<span class="thinking-indicator">${Trans.t("game.thinking", "思考中...")}</span>`;
       }
       html += '</div>';
-      html += '<div class="card-row">';
+      html += '<div class="dz-card-row">';
       hands[i].forEach((card: string) => {
-        html += `<span class="card">${this.formatCard(card)}</span>`;
+        html += `<span class="dz-card">${this.formatCard(card)}</span>`;
       });
       html += '</div>';
 
@@ -114,7 +114,7 @@ export class DoudizhuBoard {
           const cards = lastMoveAction.split(',').filter((c: string) => c.length > 0);
           html += '<span class="round-play-badge">';
           cards.forEach((card: string) => {
-            html += `<span class="card card-small">${this.formatCard(card)}</span>`;
+            html += `<span class="dz-card dz-card-small">${this.formatCard(card)}</span>`;
           });
           html += '</span>';
         }

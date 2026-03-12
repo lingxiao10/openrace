@@ -1226,11 +1226,11 @@
       padding: .3rem;
     }
 
-    .card-row-small {
+    .dz-card-row-small {
       gap: .3rem;
     }
 
-    .card-small {
+    .dz-card-small {
       min-width: 1.6rem;
       padding: .2rem .4rem;
       font-size: .8rem;
@@ -1280,13 +1280,13 @@
       font-style: italic;
     }
 
-    .card-row {
+    .dz-card-row {
       display: flex;
       flex-wrap: wrap;
       gap: .4rem;
     }
 
-    .card {
+    .dz-card {
       display: inline-flex;
       align-items: center;
       justify-content: center;
@@ -1302,26 +1302,26 @@
       transition: all .15s;
     }
 
-    .card:hover {
+    .dz-card:hover {
       transform: translateY(-1px);
       box-shadow: 0 3px 6px rgba(0, 0, 0, .12);
     }
 
-    .card-small {
+    .dz-card-small {
       min-width: 1.9rem;
       padding: .25rem .45rem;
       font-size: .85rem;
       box-shadow: 0 1px 3px rgba(0, 0, 0, .1);
     }
 
-    .card-highlight {
+    .dz-card-highlight {
       background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
       border-color: var(--warn);
       color: var(--warn);
       box-shadow: 0 2px 6px rgba(217, 119, 6, .25);
     }
 
-    .card-tiny {
+    .dz-card-tiny {
       min-width: 1.3rem;
       padding: .15rem .3rem;
       font-size: .75rem;
@@ -1791,6 +1791,61 @@
 
     .section h3 {
       margin-bottom: .75rem;
+    }
+
+    /* ---- Settings ---- */
+    .settings-avatar {
+      width: 72px;
+      height: 72px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+      font-size: 1.8rem;
+      font-weight: 700;
+      color: #fff;
+      line-height: 72px;
+      text-align: center;
+      margin-bottom: 1rem;
+    }
+
+    .settings-name {
+      font-size: 1.25rem;
+      font-weight: 700;
+      margin-bottom: .25rem;
+    }
+
+    .settings-email {
+      color: var(--muted);
+      font-size: .9rem;
+      margin-bottom: 1.25rem;
+    }
+
+    .settings-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: .875rem;
+    }
+
+    .settings-table td {
+      padding: .5rem .75rem;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .settings-table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .settings-table .st-label {
+      color: var(--muted);
+      width: 100px;
+      white-space: nowrap;
+    }
+
+    .settings-table .st-value {
+      font-weight: 500;
+    }
+
+    .settings-form {
+      max-width: 400px;
     }
 
     /* ---- Game Center ---- */
@@ -2492,6 +2547,7 @@
       <a href="#/robots" data-i18n="nav.robots">Robots</a>
       <a href="#/leaderboard" data-i18n="nav.leaderboard">Leaderboard</a>
       <a href="#/history" data-i18n="nav.history">History</a>
+      <a href="#/settings" id="nav-settings" data-i18n="nav.settings" style="display:none;">设置</a>
       <a href="#/admin" id="nav-admin" data-i18n="nav.admin" style="display:none;">管理</a>
     </div>
     <div class="nav-right">

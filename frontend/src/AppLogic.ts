@@ -400,6 +400,11 @@ export class AppLogic {
   }
 
   private static handleProfileLoaded(res: { data: unknown }): void {
+    const data = res.data as Record<string, any>;
+    if (data?.is_admin !== undefined) {
+      AppLogic.saveIsAdmin(Boolean(data.is_admin));
+      document.dispatchEvent(new CustomEvent("user_logged_in")); // refresh nav
+    }
     EventTool.emit("profile_loaded", res.data);
   }
 

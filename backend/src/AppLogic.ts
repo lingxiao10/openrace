@@ -89,7 +89,10 @@ export class AppLogic {
     if (!AppLogic.extractUserId(req)) return Response.unauthorized();
     const user = await UserService.findById(AppLogic.extractUserId(req)!);
     if (!user) return Response.notFound();
-    return Response.success(UserService.toPublic(user));
+    return Response.success({
+      ...UserService.toPublic(user),
+      is_admin: config.adminEmails.includes(user.email),
+    });
   }
 
   static async handleChangePassword(req: Request): Promise<StandardResponse<unknown>> {

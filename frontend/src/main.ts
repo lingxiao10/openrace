@@ -90,10 +90,12 @@ function updateNavButtons(): void {
   const btnLogout = document.getElementById("btn-logout");
   const btnLogin = document.getElementById("btn-login");
   const navBalance = document.getElementById("nav-balance");
+  const navSettings = document.getElementById("nav-settings");
   const navAdmin = document.getElementById("nav-admin");
 
   if (btnLogout) btnLogout.style.display = isLoggedIn ? "block" : "none";
   if (btnLogin) btnLogin.style.display = isLoggedIn ? "none" : "block";
   if (navBalance) navBalance.style.display = isLoggedIn ? "block" : "none";
+  if (navSettings) navSettings.style.display = isLoggedIn ? "block" : "none";
   if (navAdmin) navAdmin.style.display = (isLoggedIn && AppLogic.isAdmin()) ? "block" : "none";
 }
