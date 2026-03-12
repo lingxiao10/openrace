@@ -16,6 +16,7 @@ import { SettingsPage } from "./pages/SettingsPage";
 import { LogPage } from "./pages/LogPage";
 import { GameCenterPage } from "./pages/GameCenterPage";
 import { RunningMatchesPage } from "./pages/RunningMatchesPage";
+import { AdminPage } from "./pages/AdminPage";
 
 function requireAuth(): boolean {
   return Boolean(StorageTool.get("token"));
@@ -53,6 +54,7 @@ window.addEventListener("DOMContentLoaded", async () => {
   Router.register("/history", () => new HistoryPage(), true);
   Router.register("/settings", () => new SettingsPage(), true);
   Router.register("/logs", () => new LogPage(), true);
+  Router.register("/admin", () => new AdminPage(), true);
 
   Router.init("app");
 
@@ -88,8 +90,10 @@ function updateNavButtons(): void {
   const btnLogout = document.getElementById("btn-logout");
   const btnLogin = document.getElementById("btn-login");
   const navBalance = document.getElementById("nav-balance");
+  const navAdmin = document.getElementById("nav-admin");
 
   if (btnLogout) btnLogout.style.display = isLoggedIn ? "block" : "none";
   if (btnLogin) btnLogin.style.display = isLoggedIn ? "none" : "block";
   if (navBalance) navBalance.style.display = isLoggedIn ? "block" : "none";
+  if (navAdmin) navAdmin.style.display = (isLoggedIn && AppLogic.isAdmin()) ? "block" : "none";
 }
