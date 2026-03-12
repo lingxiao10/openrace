@@ -364,6 +364,19 @@ cd frontend && npm install && npm run dev
 - **废弃余额系统**: 彻底移除了后端 `GameService` 和 `RobotService` 中的用户余额校验。现在机器人匹配不再受平台内部余额限制，直接使用用户配置的 API Key 运行。
 - **UI 清理**: 移除了导航栏和设置页面中的余额显示，匹配逻辑已完全转向“用户自备 Key”模式。
 - **多玩家统计修复**: `RobotService.countInGame` 增加对 `robot_third_id` 的统计，确保斗地主对局中的机器人也被正确计入“对局中”状态。
+### 管理员数据管理页面（2026-03-12）
+- 管理员邮箱列表维护在 `secret_json.json` → `admin_emails: ["lingxiao16@126.com"]`，`secret_json_default.json` → `admin_emails: []`
+- `config.ts` 新增 `adminEmails: string[]` 字段，从 secrets 加载
+- 后端登录响应增加 `is_admin: boolean` 字段（基于 `config.adminEmails`）
+- 新增 `AdminService.ts`：`getUserList(page, limit)` / `getRobotList(page, limit)`，每页100条
+- 新增 `AdminController.ts` + 路由 `GET /api/admin/users` / `GET /api/admin/robots`
+- 后端 `AppLogic.handleAdminGetUsers/Robots`：验证 token + adminEmails 白名单，否则 403
+- 前端 `AppLogic.isAdmin()`：读 localStorage `is_admin` 标志，登录时写入，退出时清除
+- 新增 `AdminPage.ts`：Tab切换（用户/机器人），显示总数，100条/页分页
+- 路由 `/admin`（需登录），页面内二次验证 `isAdmin()`，否则跳转首页
+- 导航栏新增 `nav-admin` 链接，仅 isAdmin 时显示
+- i18n：`nav.admin`, `admin.*` 系列翻译键（zh + en）
+
 ### 开源准备（2026-03-09）
 - **协议设置**: 添加了 `Apache License 2.0`。
 - **文档维护**: 创建了英文版 `README.md` (默认) 和中文版 `README_ZH.md`。顶部互相链接切换语言，含徽章、功能列表、技术栈、快速开始、架构说明。
