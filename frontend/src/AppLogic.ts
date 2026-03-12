@@ -292,7 +292,7 @@ export class AppLogic {
   }
 
   private static handleApiError(res: { message: string }): void {
-    Toast.error(res.message);
+    Toast.error(Trans.t(res.message, res.message));
   }
 
   private static handleSendCodeSuccess(btn: HTMLButtonElement): void {

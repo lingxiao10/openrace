@@ -7,6 +7,7 @@ import { DbTool } from "../tools/DbTool";
 import { EmailTool } from "../tools/EmailTool";
 import { LogCenter } from "../log/LogCenter";
 import { UserService } from "./UserService";
+import { MatchService } from "./MatchService";
 import config from "../config/config";
 
 export interface RobotRow extends RowDataPacket {
@@ -72,6 +73,15 @@ export class RobotService {
     return rows[0] ?? null;
   }
 
+  /** Find robot regardless of removed status (used for match forfeit on deleted robots) */
+  static async findByIdRaw(id: number): Promise<RobotRow | null> {
+    const rows = await DbTool.query<RobotRow>(
+      "SELECT * FROM robots WHERE id = ? LIMIT 1",
+      [id]
+    );
+    return rows[0] ?? null;
+  }
+
   static async update(
     id: number,
     userId: number,
@@ -94,6 +104,10 @@ export class RobotService {
   }
 
   static async delete(id: number, userId: number): Promise<boolean> {
+    const busyIds = await MatchService.getBusyRobotIds();
+    if (busyIds.has(id)) {
+      throw new Error("Robot is currently in a match and cannot be deleted");
+    }
     const result = await DbTool.execute(
       "UPDATE robots SET removed = 1 WHERE id = ? AND user_id = ?",
       [id, userId]

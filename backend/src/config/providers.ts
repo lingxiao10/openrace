@@ -29,7 +29,8 @@ export const PROVIDERS: Provider[] = [
     supportsCustomModel: false,
     isPlatformFree: true,
     models: [
-      { id: "doubao-seed-2-0-mini-260215", name: "Doubao Seed 2.0 Mini (免费)" },
+      { id: "deepseek-v3-2-251201", name: "DeepSeek V3 (免费)" },
+      { id: "doubao-seed-1-8-251228", name: "Doubao Seed 1.8 (免费)" },
     ],
   },
   {
@@ -40,9 +41,7 @@ export const PROVIDERS: Provider[] = [
     supportsCustomModel: false,
     topUpUrl: "https://console.volcengine.com/ark/region:ark+cn-beijing/apiKey?apikey=%7B%7D",
     models: [
-      { id: "doubao-seed-2-0-pro-260215", name: "Doubao Seed 2.0 Pro" },
-      { id: "doubao-seed-2-0-lite-260215", name: "Doubao Seed 2.0 Lite" },
-      { id: "doubao-seed-2-0-mini-260215", name: "Doubao Seed 2.0 Mini" },
+      { id: "deepseek-v3-2-251201", name: "DeepSeek V3" },
       { id: "doubao-seed-1-8-251228", name: "Doubao Seed 1.8" },
     ],
   },

@@ -20,6 +20,12 @@ export class GamePage {
   private isAtLastMove = true;
   private matchFinished = false;
   private robotNames: Map<number, string> = new Map(); // robot_id -> name
+  private liveFollow = true;
+  private winnerRobotId: number | null = null;
+  private robotWhiteId: number | null = null;
+  private robotBlackId: number | null = null;
+  private matchWhiteName = '';
+  private matchBlackName = '';
 
   mount(container: HTMLElement, params: Record<string, string>): void {
     this.container = container;
@@ -55,7 +61,14 @@ export class GamePage {
         <button class="btn btn-sm" id="btn-next">▶</button>
         <button class="btn btn-sm" id="btn-last">⏭</button>
         <span id="move-counter" class="ml-1">—</span>
-        <span id="live-indicator" class="live-indicator" style="display:none">● ${Trans.t("game.live_updating", "实时获取对局信息中...")}</span>
+      </div>
+      <div class="live-follow-bar mt-1" style="display:flex;align-items:center;gap:8px;font-size:13px;color:#666;">
+        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="chk-live-follow" checked style="width:15px;height:15px;cursor:pointer;" />
+          ${Trans.t("game.live_follow", "实时跟进")}
+        </label>
+        <span id="live-indicator" class="live-indicator" style="display:none;color:#e74c3c;">● ${Trans.t("game.live_updating", "实时获取对局信息中...")}</span>
+        <span id="new-moves-hint" style="display:none;color:#27ae60;font-size:12px;">${Trans.t("game.new_moves_hint", "▶ 有新走法，点 ⏭ 查看最新")}</span>
       </div>
     </div>
     <div class="match-right">
@@ -85,10 +98,27 @@ export class GamePage {
   }
 
   private bindControls(): void {
-    this.container.querySelector("#btn-first")?.addEventListener("click", () => this.goToMove(0));
-    this.container.querySelector("#btn-prev")?.addEventListener("click", () => this.goToMove(this.currentMoveIdx - 1));
+    this.container.querySelector("#btn-first")?.addEventListener("click", () => {
+      this.setLiveFollow(false);
+      this.goToMove(0);
+    });
+    this.container.querySelector("#btn-prev")?.addEventListener("click", () => {
+      this.setLiveFollow(false);
+      this.goToMove(this.currentMoveIdx - 1);
+    });
     this.container.querySelector("#btn-next")?.addEventListener("click", () => this.goToMove(this.currentMoveIdx + 1));
     this.container.querySelector("#btn-last")?.addEventListener("click", () => this.goToMove(this.moves.length - 1));
+
+    // Live follow checkbox
+    this.container.querySelector("#chk-live-follow")?.addEventListener("change", (e) => {
+      const checked = (e.target as HTMLInputElement).checked;
+      this.liveFollow = checked;
+      if (checked) {
+        this.startPolling();
+      } else {
+        this.stopPolling();
+      }
+    });
 
     // Rules button
     document.getElementById("btn-rules")?.addEventListener("click", () => {
@@ -213,6 +243,13 @@ export class GamePage {
       this.robotNames.set(match.robot_third_id as number, match.third_name as string);
     }
 
+    // Store winner/player info for trophy display
+    this.winnerRobotId = (match.winner_id as number) ?? null;
+    this.robotWhiteId = match.robot_white_id as number;
+    this.robotBlackId = match.robot_black_id as number;
+    this.matchWhiteName = match.white_name as string;
+    this.matchBlackName = match.black_name as string;
+
     // Initialize board based on game type
     if (!this.chessBoard && !this.doudizhuBoard) {
       const boardContainer = this.container.querySelector("#game-board") as HTMLElement;
@@ -235,6 +272,11 @@ export class GamePage {
           match.third_name;
       const landlordIdx = landlordId === match.robot_white_id ? 0 :
         landlordId === match.robot_black_id ? 1 : 2;
+      const farmerNames = [
+        landlordId !== match.robot_white_id ? match.white_name as string : null,
+        landlordId !== match.robot_black_id ? match.black_name as string : null,
+        landlordId !== match.robot_third_id ? match.third_name as string : null,
+      ].filter(Boolean).join(' & ');
 
       // Determine winner display
       const winnerId = match.winner_id;
@@ -248,6 +290,8 @@ export class GamePage {
           [match.white_name as string, match.black_name as string, match.third_name as string],
           landlordIdx
         );
+        const landlordWon = winnerId != null ? (winnerId === landlordId) : null;
+        this.doudizhuBoard.setWinnerInfo(landlordWon);
       }
 
       let forfeitInfoHtml = '';
@@ -292,7 +336,7 @@ export class GamePage {
             ${match.winner_id ? `
             <div class="info-item">
               <span class="info-label">${Trans.t("game.winner", "胜者")}</span>
-              <span class="info-value winner">${match.winner_id === landlordId ? landlordName + ' (' + Trans.t("game.landlord", "地主") + ')' : Trans.t("game.farmers_alliance", "农民联盟")}</span>
+              <span class="info-value winner">${match.winner_id === landlordId ? landlordName + ' (' + Trans.t("game.landlord", "地主") + ')' : farmerNames}</span>
             </div>` : ''}
           </div>
         </div>`;
@@ -374,14 +418,16 @@ export class GamePage {
       this.stopPolling();
       this.updateLiveIndicator();
     }
+
+    // Board and player info now fully set up: jump to last move if moves already loaded
+    if (this.moves.length > 0) {
+      this.goToMove(this.moves.length - 1);
+    }
   }
 
   private renderMoves(moves: Array<Record<string, unknown>>): void {
     const prevTotal = this.moves.length;
     this.moves = moves;
-
-    // If user is at last move, auto-advance to new last; otherwise keep position.
-    const targetIdx = this.isAtLastMove ? moves.length - 1 : this.currentMoveIdx;
 
     const el = this.container.querySelector("#move-list");
     if (el) {
@@ -405,7 +451,7 @@ export class GamePage {
           }
 
           return `
-          <div class="move-item ${i === targetIdx ? "active" : ""}" data-idx="${i}">
+          <div class="move-item ${i === this.currentMoveIdx ? "active" : ""}" data-idx="${i}">
             <div class="move-header">
               <span class="move-num">${m.move_number}.</span>
               <span class="move-robot">${robotName}</span>
@@ -429,19 +475,19 @@ export class GamePage {
       }
     }
 
-    if (this.isAtLastMove) {
-      // Auto-advance board to latest move
-      this.goToMove(moves.length - 1);
-    } else {
-      // Only refresh the counter total, keep board position unchanged
-      const counter = this.container.querySelector("#move-counter");
-      if (counter) counter.textContent = `${this.currentMoveIdx + 1} / ${moves.length}`;
-    }
-
-    // First load: initialise to last move
+    // First load: always jump to last move
     if (prevTotal === 0 && moves.length > 0) {
       this.isAtLastMove = true;
       this.goToMove(moves.length - 1);
+    } else {
+      // Update counter only; board stays at current position
+      const counter = this.container.querySelector("#move-counter");
+      if (counter) counter.textContent = `${this.currentMoveIdx + 1} / ${moves.length}`;
+      // Show hint if there are newer moves than what user is viewing
+      const hint = this.container.querySelector("#new-moves-hint") as HTMLElement | null;
+      if (hint) {
+        hint.style.display = (moves.length > 0 && this.currentMoveIdx < moves.length - 1) ? "inline" : "none";
+      }
     }
 
     this.updateLiveIndicator();
@@ -462,12 +508,18 @@ export class GamePage {
     const clamped = Math.max(0, Math.min(idx, this.moves.length - 1));
     this.currentMoveIdx = clamped;
     this.isAtLastMove = clamped === this.moves.length - 1;
+    // Hide hint when user is at latest move
+    const hint = this.container.querySelector("#new-moves-hint") as HTMLElement | null;
+    if (hint) hint.style.display = (this.isAtLastMove) ? "none" : "inline";
     const move = this.moves[clamped];
+
+    const showWinner = this.isAtLastMove && this.matchFinished;
 
     if (this.chessBoard) {
       this.chessBoard.render(move.fen_after as string, move.move_uci as string);
+      this.updateChessBoardLabels(showWinner);
     } else if (this.doudizhuBoard) {
-      this.doudizhuBoard.render(move.fen_after as string, move.move_uci as string);
+      this.doudizhuBoard.render(move.fen_after as string, move.move_uci as string, undefined, undefined, showWinner);
     }
 
     const counter = this.container.querySelector("#move-counter");
@@ -475,10 +527,24 @@ export class GamePage {
     this.updateLiveIndicator();
   }
 
+  private updateChessBoardLabels(showWinner: boolean): void {
+    const topLabel = this.container.querySelector("#board-top-label");    // black
+    const bottomLabel = this.container.querySelector("#board-bottom-label"); // white
+    if (!topLabel || !bottomLabel) return;
+
+    const blackIsMe = !!topLabel.querySelector(".my-robot");
+    const whiteIsMe = !!bottomLabel.querySelector(".my-robot");
+    const blackTrophy = showWinner && this.winnerRobotId === this.robotBlackId ? ' <span class="board-winner-trophy">🏆</span>' : '';
+    const whiteTrophy = showWinner && this.winnerRobotId === this.robotWhiteId ? ' <span class="board-winner-trophy">🏆</span>' : '';
+
+    topLabel.innerHTML = `<span class="${blackIsMe ? 'my-robot' : ''}" id="board-black-name">♚ ${this.matchBlackName}${blackTrophy}</span>`;
+    bottomLabel.innerHTML = `<span class="${whiteIsMe ? 'my-robot' : ''}" id="board-white-name">♔ ${this.matchWhiteName}${whiteTrophy}</span>`;
+  }
+
   private updateLiveIndicator(): void {
     const el = this.container.querySelector("#live-indicator") as HTMLElement | null;
     if (!el) return;
-    const showLive = this.isAtLastMove && !this.matchFinished;
+    const showLive = this.liveFollow && !this.matchFinished;
     el.style.display = showLive ? "inline-flex" : "none";
     this.updateThinkingIndicator();
   }
@@ -506,6 +572,13 @@ export class GamePage {
     } else {
       boardBlackEl?.insertAdjacentHTML("beforeend", bubble);
     }
+  }
+
+  private setLiveFollow(enabled: boolean): void {
+    this.liveFollow = enabled;
+    const chk = this.container.querySelector("#chk-live-follow") as HTMLInputElement | null;
+    if (chk) chk.checked = enabled;
+    if (!enabled) this.stopPolling();
   }
 
   private startPolling(): void {

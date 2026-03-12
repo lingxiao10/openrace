@@ -136,7 +136,7 @@ export class AppLogic {
     // 测试API是否可用（免费使用平台 key 测试）
     const testApiKey = isFree ? config.game.platformArkApiKey : req.body.api_key;
     const testBaseUrl = isFree ? config.game.arkBaseUrl : req.body.base_url;
-    const testModel = isFree ? "doubao-seed-2-0-mini-260215" : req.body.model;
+    const testModel = req.body.model ?? config.game.defaultModel;
     const testResult = await AppLogic.testRobotApi(testApiKey, testModel, req.body.provider, testBaseUrl);
     if (!testResult.success) {
       return Response.error(400, testResult.error || "robot.api_test_failed");
@@ -150,7 +150,7 @@ export class AppLogic {
     await RobotService.create(
       AppLogic.extractUserId(req)!,
       req.body.name,
-      isFree ? "doubao-seed-2-0-mini-260215" : (req.body.model ?? config.game.defaultModel),
+      req.body.model ?? config.game.defaultModel,
       req.body.strategy ?? null,
       gameType,
       req.body.provider,
@@ -165,7 +165,7 @@ export class AppLogic {
   static async handleGetRobots(req: Request): Promise<StandardResponse<unknown>> {
     if (!AppLogic.extractUserId(req)) return Response.unauthorized();
     const robots = await RobotService.findByUser(AppLogic.extractUserId(req)!);
-    const busyRobotIds = await MatchService.getBusyRobotIds();
+    const busyMap = await MatchService.getBusyRobotMatchMap();
 
     // Add today's match count for each robot, remove encrypted API key
     const robotsWithStats = await Promise.all(
@@ -175,7 +175,8 @@ export class AppLogic {
           ...robotData,
           today_matches: await RobotService.getTodayMatchCount(robot.id),
           max_daily_matches: config.game.maxMatchesPerRobotPerDay,
-          in_game: busyRobotIds.has(robot.id),
+          in_game: busyMap.has(robot.id),
+          current_match_id: busyMap.get(robot.id) ?? null,
         };
       })
     );
@@ -196,8 +197,13 @@ export class AppLogic {
 
   static async handleDeleteRobot(req: Request): Promise<StandardResponse<unknown>> {
     if (!AppLogic.extractUserId(req)) return Response.unauthorized();
-    if (!await RobotService.delete(Number(req.params.id), AppLogic.extractUserId(req)!))
-      return Response.error(403, "robot.forbidden");
+    try {
+      if (!await RobotService.delete(Number(req.params.id), AppLogic.extractUserId(req)!))
+        return Response.error(403, "robot.forbidden");
+    } catch (e: any) {
+      if (e.message?.includes("currently in a match")) return Response.error(400, "robot.in_game");
+      throw e;
+    }
     Action.success(Trans.t("robot.deleted"));
     return Response.success(null, "robot.deleted");
   }

@@ -164,15 +164,23 @@ export class MatchService {
 
   /** Returns robot IDs that are currently in a pending or running match */
   static async getBusyRobotIds(): Promise<Set<number>> {
-    const rows = await DbTool.query<RowDataPacket & { rid: number }>(
-      `SELECT robot_white_id AS rid FROM matches WHERE status IN ('pending','running')
-       UNION
-       SELECT robot_black_id FROM matches WHERE status IN ('pending','running')
-       UNION
-       SELECT robot_third_id FROM matches WHERE status IN ('pending','running') AND robot_third_id IS NOT NULL`,
+    const map = await MatchService.getBusyRobotMatchMap();
+    return new Set(map.keys());
+  }
+
+  /** Returns a map of robotId → matchId for robots currently in a pending or running match */
+  static async getBusyRobotMatchMap(): Promise<Map<number, number>> {
+    const rows = await DbTool.query<RowDataPacket & { rid: number; mid: number }>(
+      `SELECT robot_white_id AS rid, id AS mid FROM matches WHERE status IN ('pending','running')
+       UNION ALL
+       SELECT robot_black_id, id FROM matches WHERE status IN ('pending','running')
+       UNION ALL
+       SELECT robot_third_id, id FROM matches WHERE status IN ('pending','running') AND robot_third_id IS NOT NULL`,
       []
     );
-    return new Set(rows.map((r) => r.rid));
+    const map = new Map<number, number>();
+    for (const r of rows) map.set(r.rid, r.mid);
+    return map;
   }
 
   static async getMatchesByIds(ids: number[]): Promise<MatchRow[]> {

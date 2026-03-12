@@ -73,9 +73,10 @@ export class BalanceService {
   }
 
   static async getLog(userId: number, limit = 50): Promise<BalanceLogRow[]> {
+    const limitInt = Math.trunc(limit);
     return DbTool.query<BalanceLogRow>(
-      "SELECT * FROM balance_log WHERE user_id = ? ORDER BY created_at DESC LIMIT ?",
-      [userId, limit]
+      `SELECT * FROM balance_log WHERE user_id = ? ORDER BY created_at DESC LIMIT ${limitInt}`,
+      [userId]
     );
   }
 }

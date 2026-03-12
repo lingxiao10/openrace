@@ -8,6 +8,7 @@ export class DoudizhuBoard {
   private container: HTMLElement;
   private playerNames: string[] = [];
   private landlordIdx: number = 0;
+  private landlordWon: boolean | null = null;
 
   constructor(container: HTMLElement) {
     this.container = container;
@@ -18,16 +19,20 @@ export class DoudizhuBoard {
     this.landlordIdx = landlordIdx;
   }
 
-  render(stateJson: string, moveUci?: string, moveRobotId?: number, robotIds?: number[]): void {
+  setWinnerInfo(landlordWon: boolean | null): void {
+    this.landlordWon = landlordWon;
+  }
+
+  render(stateJson: string, moveUci?: string, moveRobotId?: number, robotIds?: number[], showWinner = false): void {
     try {
       const state = JSON.parse(stateJson);
-      this.container.innerHTML = this.buildHtml(state, moveUci, moveRobotId, robotIds);
+      this.container.innerHTML = this.buildHtml(state, moveUci, moveRobotId, robotIds, showWinner);
     } catch (e) {
       this.container.innerHTML = `<div class="doudizhu-error">${Trans.t("game.waiting", "等待对局开始...")}</div>`;
     }
   }
 
-  private buildHtml(state: any, lastMove?: string, lastMoveRobotId?: number, robotIds?: number[]): string {
+  private buildHtml(state: any, lastMove?: string, lastMoveRobotId?: number, robotIds?: number[], showWinner = false): string {
     const hands = state.hands || [[], [], []];
     const lastPlay = state.lastPlay;
     const currentPlayerIdx = state.currentPlayerIdx ?? 0;
@@ -47,11 +52,13 @@ export class DoudizhuBoard {
     const landlordRole = `🤴 ${Trans.t("game.landlord", "地主")}`;
     const landlordActive = currentPlayerIdx === landlordIdx;
     const landlordThinking = landlordActive && (!lastMove || lastMove === 'thinking');
+    const landlordIsWinner = showWinner && this.landlordWon === true;
 
     html += `<div class="doudizhu-player doudizhu-landlord ${landlordActive ? 'player-active' : ''}">`;
     html += `<div class="player-header">`;
     html += `<span class="player-role">${landlordRole}</span>`;
     html += `<span class="player-name">${this.playerNames[landlordIdx] || `${Trans.t("game.player", "玩家")}${landlordIdx + 1}`}</span>`;
+    if (landlordIsWinner) html += `<span class="board-winner-trophy">🏆</span>`;
     html += `<span class="player-cards-count">${hands[landlordIdx].length} ${Trans.t("game.cards_count", "张")}</span>`;
     if (landlordThinking) {
       html += `<span class="thinking-indicator">${Trans.t("game.thinking", "思考中...")}</span>`;
@@ -88,11 +95,13 @@ export class DoudizhuBoard {
       const farmerRole = `👨‍🌾 ${Trans.t("game.farmer", "农民")}`;
       const farmerActive = currentPlayerIdx === i;
       const farmerThinking = farmerActive && (!lastMove || lastMove === 'thinking');
+      const farmerIsWinner = showWinner && this.landlordWon === false;
 
       html += `<div class="doudizhu-player doudizhu-farmer ${farmerActive ? 'player-active' : ''}">`;
       html += `<div class="player-header">`;
       html += `<span class="player-role">${farmerRole}</span>`;
       html += `<span class="player-name">${this.playerNames[i] || `${Trans.t("game.player", "玩家")}${i + 1}`}</span>`;
+      if (farmerIsWinner) html += `<span class="board-winner-trophy">🏆</span>`;
       html += `<span class="player-cards-count">${hands[i].length} ${Trans.t("game.cards_count", "张")}</span>`;
       if (farmerThinking) {
         html += `<span class="thinking-indicator">${Trans.t("game.thinking", "思考中...")}</span>`;

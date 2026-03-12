@@ -15,6 +15,7 @@ interface SecretJson {
   encryption_salt?: string;
   need_check_email?: boolean;
   admin_emails?: string[];
+  default_model?: string;
 }
 
 function loadSecrets(): SecretJson {
@@ -128,7 +129,7 @@ const config: Config = {
     matchIntervalMs: 10000,
     leaderboardIntervalMs: 86400000,
     seasonWaitMs: 600000,
-    defaultModel: "x-ai/grok-code-fast-1",
+    defaultModel: secrets.default_model || "deepseek-v3-2-251201",
     availableModels: [
       "x-ai/grok-code-fast-1",
       "minimax/minimax-m2.5",

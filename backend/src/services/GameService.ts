@@ -145,16 +145,41 @@ export class GameService {
       }
 
       if (match.game_type === "chess") {
-        const white = await RobotService.findById(match.robot_white_id);
-        const black = await RobotService.findById(match.robot_black_id);
+        const white = await RobotService.findByIdRaw(match.robot_white_id);
+        const black = await RobotService.findByIdRaw(match.robot_black_id);
         if (!white || !black) return;
+
+        if (white.removed && black.removed) {
+          await MatchService.finishMatch(matchId, null, "robot_deleted");
+          LogCenter.warn("GameService", `Chess match ${matchId} cancelled: both robots deleted`);
+          return;
+        }
+        if (white.removed) {
+          await GameService.forfeitRobot(matchId, white, black, "robot_deleted");
+          return;
+        }
+        if (black.removed) {
+          await GameService.forfeitRobot(matchId, black, white, "robot_deleted");
+          return;
+        }
 
         await GameService.playChessGame(matchId, white, black);
       } else if (match.game_type === "doudizhu") {
-        const player1 = await RobotService.findById(match.robot_white_id);
-        const player2 = await RobotService.findById(match.robot_black_id);
-        const player3 = await RobotService.findById(match.robot_third_id!);
+        const player1 = await RobotService.findByIdRaw(match.robot_white_id);
+        const player2 = await RobotService.findByIdRaw(match.robot_black_id);
+        const player3 = await RobotService.findByIdRaw(match.robot_third_id!);
         if (!player1 || !player2 || !player3) return;
+
+        const players = [player1, player2, player3];
+        const landlordIdx = players.findIndex((p) => p.id === match.robot_landlord_id);
+        const deletedIdx = players.findIndex((p) => p.removed);
+        if (deletedIdx !== -1) {
+          const outcome = deletedIdx === landlordIdx ? "farmers" : "landlord";
+          await GameService.finishDoudizhuMatch(matchId, players, landlordIdx, outcome, "robot_deleted", players[deletedIdx].id);
+          LogCenter.warn("GameService", `Doudizhu match ${matchId} forfeited: robot ${players[deletedIdx].id} deleted`);
+          return;
+        }
+
         await GameService.playDoudizhuGame(matchId, player1, player2, player3, match.robot_landlord_id!);
       }
     } finally {
@@ -251,12 +276,6 @@ export class GameService {
       if (!move || !aiResult) {
         MatchLogTool.logForfeit(logPath, robot.id, robot.name, `Forfeit Reason:\nFailed to produce legal move after 12 attempts. Last error: ${lastError}`);
 
-        // 增加错误计数并检查是否需要暂停
-        const errorCount = await RobotService.incrementErrorCount(robot.id);
-        if (errorCount >= 5) {
-          await RobotService.suspend(robot.id, "Failed to produce legal move 5 times");
-        }
-
         await GameService.forfeitRobot(
           matchId, robot, isWhiteTurn ? black : white,
           `Forfeit Reason:\nFailed to produce legal move after 12 attempts. Last error: ${lastError}`
@@ -351,6 +370,7 @@ export class GameService {
       let finalCards: string[] | null = null;
       let aiResult: AiCallResult | null = null;
       let lastError = "";
+      let lastAttemptContent = "";
 
       for (let attempt = 1; attempt <= 12; attempt++) {
         const messages = OpenRouterTool.buildDoudizhuPrompt(
@@ -358,7 +378,11 @@ export class GameService {
           state.lastPlay,
           role,
           currentPlayer.strategy ?? "",
-          lastError
+          state.moveHistory,
+          landlordIdx,
+          players.map((p) => p.name),
+          lastError,
+          lastAttemptContent
         );
 
         aiResult = await GameService.callChatWithRetry(
@@ -372,13 +396,24 @@ export class GameService {
 
         if (!aiResult) {
           lastError = "AI call failed (network/timeout/API error)";
+          lastAttemptContent = "";
           LogCenter.warn("GameService", `Robot ${currentPlayer.id} attempt ${attempt}/12: ${lastError}`);
           continue;
         }
 
+        // Track raw AI response for next attempt's context
+        lastAttemptContent = aiResult.content.trim();
+
         // Parse action
         const actionStr = OpenRouterTool.parseDoudizhuAction(aiResult.content);
         const cards = actionStr === "pass" ? [] : actionStr.split(",").filter((c) => c.length > 0);
+
+        // Cannot pass when leading (lastPlay is null means you control the table)
+        if (cards.length === 0 && state.lastPlay === null) {
+          lastError = `You cannot pass when you are leading (no last play to beat). You MUST play a valid combination.`;
+          LogCenter.warn("GameService", `Robot ${currentPlayer.id} attempt ${attempt}/12: ${lastError}`);
+          continue;
+        }
 
         // Validate play
         if (cards.length > 0) {
@@ -515,7 +550,6 @@ export class GameService {
     reason: string
   ): Promise<void> {
     const forfeitPlayer = players[forfeitPlayerIdx];
-    await RobotService.suspend(forfeitPlayer.id);
 
     // Determine winner based on who forfeited
     if (forfeitPlayerIdx === landlordIdx) {
@@ -571,7 +605,6 @@ export class GameService {
     loser: RobotRow,
     winner: RobotRow
   ): Promise<void> {
-    await RobotService.suspend(loser.id);
     await GameService.forfeitRobot(matchId, loser, winner, "insufficient_balance");
   }
 
@@ -601,17 +634,6 @@ export class GameService {
       const result = await OpenRouterTool.callChat(apiKey, model, messages, 30000, baseUrl, extraBody).catch((err: Error) => {
         LogCenter.warn("GameService", `Robot ${robotId} AI call attempt ${attempt}/${maxAttempts} failed: ${err.message}`);
 
-        // 检查是否是余额不足错误
-        if (err.message.includes("quota") || err.message.includes("insufficient") || err.message.includes("balance")) {
-          LogCenter.error("GameService", `Robot ${robotId} API quota/balance error detected`);
-          RobotService.incrementErrorCount(robotId).then(count => {
-            if (count >= 5) {
-              RobotService.suspend(robotId, "API quota/balance error (5 consecutive failures)");
-              LogCenter.error("GameService", `Robot ${robotId} suspended due to 5 consecutive API errors`);
-            }
-          });
-        }
-
         return null;
       });
 
@@ -626,13 +648,13 @@ export class GameService {
       }
     }
 
-    // 所有重试失败，增加错误计数
+    // 所有重试均返回空响应（API无响应），累计空响应次数，连续5次才暂停
     const errorCount = await RobotService.incrementErrorCount(robotId);
-    LogCenter.error("GameService", `Robot ${robotId} AI call failed after ${maxAttempts} attempts (error count: ${errorCount}/5)`);
+    LogCenter.error("GameService", `Robot ${robotId} API returned empty response after ${maxAttempts} attempts (empty count: ${errorCount}/5)`);
 
     if (errorCount >= 5) {
-      await RobotService.suspend(robotId, "API call failed 5 consecutive times");
-      LogCenter.error("GameService", `Robot ${robotId} suspended due to 5 consecutive API failures`);
+      await RobotService.suspend(robotId, "API returned empty response 5 consecutive times");
+      LogCenter.error("GameService", `Robot ${robotId} suspended: 5 consecutive empty API responses`);
     }
 
     return null;

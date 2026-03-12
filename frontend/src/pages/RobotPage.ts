@@ -8,7 +8,6 @@ import { Config } from "../core/Config";
 import { EventTool } from "../tools/EventTool";
 import { Toast } from "../ui/Toast";
 
-const DEFAULT_STRATEGY = `Play solid, principled chess. Control the center with pawns. Develop knights before bishops. Castle early for king safety. Avoid moving the same piece twice in the opening. Look for tactical opportunities but prioritize positional play.`;
 
 export class RobotPage {
   private container!: HTMLElement;
@@ -73,13 +72,23 @@ export class RobotPage {
       customModelInput.value = "";
       modelSelect.removeAttribute("disabled");
 
-      // Handle ark-free: platform provides the key for free
+      // Handle ark-free: platform provides the key for free, but user can choose model
       if (providerSelect.value === "ark-free") {
         if (apiKeyGroup) apiKeyGroup.style.display = "none";
-        if (modelGroup) modelGroup.style.display = "none";
-        if (freeModelLabel) freeModelLabel.style.display = "block";
+        if (freeModelLabel) freeModelLabel.style.display = "none";
         baseUrlGroup.style.display = "none";
         topupLink.style.display = "none";
+        if (modelGroup) modelGroup.style.display = "block";
+        if (selectedProvider) {
+          selectedProvider.models.forEach((m) => {
+            const option = document.createElement("option");
+            option.value = m.id;
+            option.textContent = m.name;
+            modelSelect.appendChild(option);
+          });
+        }
+        modelSelect.style.display = "block";
+        modelSelect.setAttribute("required", "required");
         return;
       }
 
@@ -219,7 +228,7 @@ export class RobotPage {
       <div class="form-group" id="free-model-label" style="display:none;">
         <label>${Trans.t("robot.model", "AI Model")}</label>
         <div style="padding: 8px 12px; background: #eafaf1; border: 1px solid #2ecc71; border-radius: 6px; font-size: 13px; color: #27ae60;">
-          ✅ Doubao Seed 2.0 Mini — ${Trans.t("robot.free_provided", "免费，由平台提供")}
+          ✅ DeepSeek V3 — ${Trans.t("robot.free_provided", "免费，由平台提供")}
         </div>
       </div>
       <div class="form-group">
@@ -289,20 +298,6 @@ export class RobotPage {
       const customModelInput = document.getElementById("custom-model-input") as HTMLInputElement;
       const providerSelect = document.getElementById("provider-select") as HTMLSelectElement;
 
-      // ark-free: inject fixed model value so form data is complete
-      if (providerSelect.value === "ark-free") {
-        let hiddenModel = form.querySelector<HTMLInputElement>('input[name="model"]');
-        if (!hiddenModel) {
-          hiddenModel = document.createElement("input");
-          hiddenModel.type = "hidden";
-          hiddenModel.name = "model";
-          form.appendChild(hiddenModel);
-        }
-        hiddenModel.value = "doubao-seed-2-0-mini-260215";
-        AppLogic.onCreateRobot(form);
-        return;
-      }
-
       // If custom model is selected, use the custom input value
       if ((modelSelect.value === "__custom__" || providerSelect.value === "openai-compatible") && customModelInput.value.trim()) {
         const customOption = document.createElement("option");
@@ -316,7 +311,12 @@ export class RobotPage {
 
     document.querySelector("#use-default-strategy")?.addEventListener("click", () => {
       const ta = document.querySelector<HTMLTextAreaElement>("textarea[name=strategy]");
-      if (ta) ta.value = DEFAULT_STRATEGY;
+      const gameTypeSelect = document.getElementById("game-type-select") as HTMLSelectElement;
+      if (!ta) return;
+      const gameType = gameTypeSelect?.value || "chess";
+      ta.value = gameType === "doudizhu"
+        ? Trans.t("robot.default_strategy_doudizhu", "")
+        : Trans.t("robot.default_strategy_chess", "");
     });
   }
 
@@ -381,13 +381,17 @@ export class RobotPage {
     const errorCount = r.error_count as number || 0;
     const provider = r.provider as string || "unknown";
 
+    const currentMatchId = r.current_match_id as number | null;
     let statusText = "";
     let statusClass = "";
     if (suspended) {
       statusText = Trans.t("robot.status_stopped", "已暂停");
       statusClass = "status-text-stopped";
     } else if (inGame) {
-      statusText = Trans.t("robot.status_in_game", "对局中");
+      const label = Trans.t("robot.status_in_game", "对局中");
+      statusText = currentMatchId
+        ? `<a href="#/match/${currentMatchId}" style="color:inherit;text-decoration:underline;cursor:pointer;">${label} →</a>`
+        : label;
       statusClass = "status-text-ingame";
     } else {
       statusText = Trans.t("robot.status_waiting", "已启用，正在等待对局匹配");
