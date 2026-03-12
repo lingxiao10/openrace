@@ -87,6 +87,20 @@ export class UserService {
     };
   }
 
+  static async changePassword(
+    userId: number,
+    oldPassword: string,
+    newPassword: string
+  ): Promise<"ok" | "wrong_password" | "not_found"> {
+    const user = await UserService.findById(userId);
+    if (!user) return "not_found";
+    if (!AuthTool.checkPassword(oldPassword, user.password_hash)) return "wrong_password";
+    const hash = AuthTool.hashPassword(newPassword);
+    await DbTool.execute("UPDATE users SET password_hash = ? WHERE id = ?", [hash, userId]);
+    LogCenter.info("UserService", `Password changed for user id=${userId}`);
+    return "ok";
+  }
+
   static isValidEmail(email: string): boolean {
     return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
   }

@@ -47,11 +47,16 @@ export class UserController {
       const result = await AppLogic.handleGetProfile(req);
       res.json(result);
     } catch (error: any) {
-      res.status(500).json({
-        code: 500,
-        message: error.message || "Internal server error",
-        data: null
-      });
+      res.status(500).json({ code: 500, message: error.message || "Internal server error", data: null });
+    }
+  }
+
+  static async changePassword(req: Request, res: ExpressResponse): Promise<void> {
+    try {
+      const result = await AppLogic.handleChangePassword(req);
+      res.json(result);
+    } catch (error: any) {
+      res.status(500).json({ code: 500, message: error.message || "Internal server error", data: null });
     }
   }
 }

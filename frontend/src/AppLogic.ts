@@ -212,6 +212,19 @@ export class AppLogic {
     await Comm.get("/api/balance", AppLogic.handleBalanceLoaded);
   }
 
+  static async loadProfile(): Promise<void> {
+    await Comm.get("/api/user/profile", AppLogic.handleProfileLoaded);
+  }
+
+  static async onChangePassword(form: HTMLFormElement): Promise<void> {
+    await Comm.post(
+      "/api/user/change-password",
+      AppLogic.formToObject(form),
+      AppLogic.handlePasswordChanged,
+      AppLogic.handleApiError
+    );
+  }
+
   static async loadSettings(): Promise<void> {
     await Comm.get("/api/settings", AppLogic.handleSettingsLoaded);
   }
@@ -384,6 +397,14 @@ export class AppLogic {
 
   private static handleSettingsLoaded(res: { data: unknown }): void {
     EventTool.emit("settings_loaded", res.data);
+  }
+
+  private static handleProfileLoaded(res: { data: unknown }): void {
+    EventTool.emit("profile_loaded", res.data);
+  }
+
+  private static handlePasswordChanged(_res: unknown): void {
+    EventTool.emit("password_changed");
   }
 
   private static handleSettingsSaved(_res: unknown): void {

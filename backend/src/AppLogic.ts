@@ -92,6 +92,18 @@ export class AppLogic {
     return Response.success(UserService.toPublic(user));
   }
 
+  static async handleChangePassword(req: Request): Promise<StandardResponse<unknown>> {
+    if (!AppLogic.extractUserId(req)) return Response.unauthorized();
+    const { old_password, new_password } = req.body as Record<string, string>;
+    if (!old_password || !new_password) return Response.paramError();
+    if (new_password.length < 6) return Response.error(400, "user.password_too_short");
+    const result = await UserService.changePassword(AppLogic.extractUserId(req)!, old_password, new_password);
+    if (result === "wrong_password") return Response.error(400, "user.wrong_password");
+    if (result === "not_found") return Response.notFound();
+    Action.success(Trans.t("user.password_changed"));
+    return Response.success(null, "user.password_changed");
+  }
+
   // ----------------------------------------------------------------
   // ROBOT
   // ----------------------------------------------------------------

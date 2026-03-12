@@ -42,7 +42,8 @@ app.get(`${api}/init`, InitController.getInit);
 app.post(`${api}/user/login`,     UserController.login);
 app.post(`${api}/user/register`,  UserController.register);
 app.post(`${api}/user/send-code`, UserController.sendVerificationCode);
-app.get(`${api}/user/profile`,    UserController.getProfile);
+app.get(`${api}/user/profile`,         UserController.getProfile);
+app.post(`${api}/user/change-password`, UserController.changePassword);
 
 // ---- Robot ----
 app.post(`${api}/robot`,              RobotController.create);

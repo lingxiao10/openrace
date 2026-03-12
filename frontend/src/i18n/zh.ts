@@ -87,6 +87,14 @@ export const zh: Record<string, string> = {
 
   // 余额 / 设置
   "balance.info": "每次 AI 落子会扣除相应余额，请保持账户余额充足。",
+  "settings.profile": "个人信息",
+  "settings.change_password": "修改密码",
+  "settings.old_password": "当前密码",
+  "settings.new_password": "新密码",
+  "settings.password_hint": "至少6位",
+  "settings.save_password": "保存密码",
+  "user.password_changed": "密码修改成功",
+  "user.password_too_short": "密码至少6位",
   "settings.api_key": "OpenRouter API Key",
   "settings.api_key_info": "您的 API Key 已加密存储，请放心。",
   "settings.api_key_label": "API Key",

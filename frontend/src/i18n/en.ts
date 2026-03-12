@@ -87,6 +87,14 @@ export const en: Record<string, string> = {
 
   // Balance / Settings
   "balance.info": "Balance is deducted for each AI move. Keep your account topped up.",
+  "settings.profile": "Profile",
+  "settings.change_password": "Change Password",
+  "settings.old_password": "Current Password",
+  "settings.new_password": "New Password",
+  "settings.password_hint": "At least 6 characters",
+  "settings.save_password": "Save Password",
+  "user.password_changed": "Password changed successfully",
+  "user.password_too_short": "Password must be at least 6 characters",
   "settings.api_key": "OpenRouter API Key",
   "settings.api_key_info": "Your API key is encrypted and stored securely.",
   "settings.api_key_label": "API Key",

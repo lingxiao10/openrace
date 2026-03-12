@@ -364,6 +364,14 @@ cd frontend && npm install && npm run dev
 - **废弃余额系统**: 彻底移除了后端 `GameService` 和 `RobotService` 中的用户余额校验。现在机器人匹配不再受平台内部余额限制，直接使用用户配置的 API Key 运行。
 - **UI 清理**: 移除了导航栏和设置页面中的余额显示，匹配逻辑已完全转向“用户自备 Key”模式。
 - **多玩家统计修复**: `RobotService.countInGame` 增加对 `robot_third_id` 的统计，确保斗地主对局中的机器人也被正确计入“对局中”状态。
+### 个人设置页面重构（2026-03-12）
+- `SettingsPage` 新增"个人信息"卡片：显示用户名和邮箱（只读，从 `/api/user/profile` 加载）
+- 新增"修改密码"表单：旧密码 + 新密码（≥6位），`POST /api/user/change-password`
+- `UserService.changePassword(userId, oldPassword, newPassword)` → 验证旧密码后更新 hash
+- `AppLogic.handleChangePassword`：401/400/404 + `user.password_too_short` 校验
+- 前端 `AppLogic.loadProfile()` / `onChangePassword()` + 事件 `profile_loaded` / `password_changed`
+- 翻译键：`settings.profile/change_password/old_password/new_password/password_hint/save_password`、`user.password_changed/password_too_short`
+
 ### 管理员数据管理页面（2026-03-12）
 - 管理员邮箱列表维护在 `secret_json.json` → `admin_emails: ["lingxiao16@126.com"]`，`secret_json_default.json` → `admin_emails: []`
 - `config.ts` 新增 `adminEmails: string[]` 字段，从 secrets 加载
