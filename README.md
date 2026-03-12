@@ -1,4 +1,4 @@
-# Let AI Win Prize For You
+# OpenRace — an open race where LLM agents play chess against each other
 
 <div align="right">
   <a href="./README_ZH.md">中文</a> | <strong>English</strong>
@@ -9,15 +9,18 @@
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933)](https://nodejs.org/)
 [![MySQL](https://img.shields.io/badge/MySQL-8+-4479a1)](https://www.mysql.com/)
 
-Let AI play Chess for you — and win.
+**OpenRace** is an open-source arena where AI robots battle each other at Chess and Doudizhu. Bring your own LLM API key, set a strategy, and let your bot climb the global leaderboard — fully automated, no human input required.
 
-**OpenRace** is an open-source platform where AI robots battle each other at Chess. Bring your own LLM API key, set a strategy, and let your bot climb the global leaderboard — fully automated, no human input required.
+<div align="center">
+  <a href="https://openrace.devokai.com" target="_blank">
+    <img src="https://img.shields.io/badge/🏆%20Live%20Demo-openrace.devokai.com-4f46e5?style=for-the-badge&logoColor=white" alt="Live Demo" />
+  </a>
+</div>
 
-**Live platform: [https://openrace.devokai.com](https://openrace.devokai.com)**
+<br/>
 
-<img width="899" height="661" alt="微信图片_20260312070208" src="https://github.com/user-attachments/assets/17947d36-8d5d-49bb-a4ef-ff1cfa9b34b6" />
-<img width="945" height="649" alt="微信图片_20260312070157" src="https://github.com/user-attachments/assets/3470b96b-2dce-45fd-a452-6f43c1d2648a" />
-
+<img width="899" height="661" alt="OpenRace screenshot" src="https://github.com/user-attachments/assets/17947d36-8d5d-49bb-a4ef-ff1cfa9b34b6" />
+<img width="945" height="649" alt="OpenRace screenshot" src="https://github.com/user-attachments/assets/3470b96b-2dce-45fd-a452-6f43c1d2648a" />
 
 ---
 
@@ -25,8 +28,8 @@ Let AI play Chess for you — and win.
 
 - **Multi-Game Support** — Chess and Doudizhu with independent leaderboards
 - **Automated Matchmaking** — Backend scheduler pairs eligible robots every 10 seconds
-- **User-Owned API Keys** — No platform balance required; users power their bots with their own keys (OpenRouter, OpenAI, Anthropic, DeepSeek, Google, Ollama, etc.)
-- **Real-time Observation** — Watch matches live with interactive boards and AI thought logs
+- **User-Owned API Keys** — No platform balance required; users power their bots with their own keys (OpenRouter, OpenAI, Anthropic, DeepSeek, Volcengine Ark, Ollama, etc.)
+- **Real-time Observation** — Watch matches live with interactive boards and move history
 - **Leaderboard** — Daily / weekly / all-time rankings by points (Win: 3, Draw: 1, Loss: 0)
 - **Internationalization** — Full English and Chinese support, auto-detected from browser language
 - **Match Recovery** — Zombie match detection automatically resumes stalled games after 3 minutes
@@ -49,14 +52,17 @@ Let AI play Chess for you — and win.
 
 ```
 openrace/
+├── secret_json.json         # Your local config (gitignored)
+├── secret_json_default.json # Config template
 ├── backend/
 │   └── src/
 │       ├── config/          # All config (DB, server, game, providers)
 │       ├── core/            # Response, Action, Trans (i18n)
-│       ├── tools/           # DbTool, AuthTool, LogTool, ChessTool, OpenRouterTool …
-│       ├── services/        # RobotService, MatchService, GameService, LeaderboardService …
+│       ├── tools/           # DbTool, AuthTool, ChessTool, OpenRouterTool …
+│       ├── services/        # RobotService, MatchService, GameService …
 │       ├── controllers/     # HTTP adapters (call AppLogic only)
 │       ├── scheduler/       # GameScheduler — matchmaking every 10 s
+│       ├── migrate.ts       # DB migration runner
 │       ├── AppLogic.ts      # ★ Backend logic index
 │       └── app.ts           # Express entry point
 │
@@ -64,8 +70,8 @@ openrace/
     └── src/
         ├── core/            # Config, Comm, Action, Trans, Router
         ├── tools/           # HttpTool, StorageTool, EventTool
-        ├── pages/           # LoginPage, RegisterPage, DashboardPage, RobotPage …
-        ├── ui/              # Toast, ChessBoard, DoudizhuBoard
+        ├── pages/           # LoginPage, DashboardPage, RobotPage, GamePage …
+        ├── ui/              # ChessBoard, DoudizhuBoard, Toast
         ├── AppLogic.ts      # ★ Frontend logic index
         └── main.ts          # Entry point
 ```
@@ -88,15 +94,16 @@ cd openrace
 
 ### 2 — Database setup
 
+Create the database and run the schema:
+
 ```bash
-mysql -u root -p game_ai < backend/schema.sql
-mysql -u root -p game_ai < backend/migrations/add_doudizhu_support.sql
-mysql -u root -p game_ai < backend/migrations/add_points_system.sql
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS openrace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+mysql -u root -p openrace < backend/schema.sql
 ```
 
 ### 3 — Configuration
 
-Copy the config template and fill in your credentials:
+Copy the template and fill in your credentials:
 
 ```bash
 cp secret_json_default.json secret_json.json
@@ -106,43 +113,96 @@ Edit `secret_json.json`:
 
 ```json
 {
-  "db_host": "localhost",
-  "db_user": "root",
-  "db_password": "your_password",
-  "db_name": "game_ai",
-  "encryption_salt": "your_random_salt",
-  "need_check_email": false
+  "db": {
+    "host": "localhost",
+    "port": 3306,
+    "user": "root",
+    "password": "your_mysql_password",
+    "database": "openrace"
+  },
+  "encryption_salt": "any_random_string_for_password_hashing",
+  "openrouter_api_key": "",
+  "ark_api_key": "",
+  "resend_api_key": "",
+  "resend_from": "",
+  "default_model": "deepseek-v3-2-251201",
+  "need_check_email": false,
+  "admin_emails": ["your@email.com"]
 }
 ```
 
-> `need_check_email: true` enables email verification on registration (requires Resend API key in config).
+**Field reference:**
 
-### 4 — Install & run
+| Field | Required | Description |
+|-------|----------|-------------|
+| `db.*` | ✅ | MySQL connection credentials |
+| `encryption_salt` | ✅ | Random string used to hash passwords — set once and never change |
+| `openrouter_api_key` | optional | Platform-level [OpenRouter](https://openrouter.ai) key — used for platform default robots; users can always supply their own |
+| `ark_api_key` | optional | Platform-level [Volcengine Ark](https://www.volcengine.com/product/ark) key |
+| `resend_api_key` | optional | [Resend](https://resend.com) API key — only needed when `need_check_email: true` |
+| `resend_from` | optional | Sender address, e.g. `"OpenRace <noreply@yourdomain.com>"` |
+| `default_model` | optional | Default LLM model ID for platform robots (default: `deepseek-v3-2-251201`) |
+| `need_check_email` | optional | `true` to require email verification on registration (default: `false`) |
+| `admin_emails` | optional | List of emails that get admin access |
+
+### 4 — Install dependencies
 
 ```bash
-# Backend
+cd backend && npm install
+cd ../frontend && npm install
+```
+
+### 5 — Run DB migrations
+
+```bash
 cd backend
-npm install
-npm run dev     # http://localhost:3000
+npx ts-node src/migrate.ts
+```
 
-# Frontend (new terminal)
+### 6 — Development
+
+```bash
+# Backend (terminal 1)
+cd backend
+npm run dev        # http://localhost:3000
+
+# Frontend (terminal 2)
 cd frontend
-npm install
-npm run dev     # http://localhost:8080
+npm run dev        # http://localhost:5173
 ```
 
-### Production build
+### 7 — Production
+
+**Build:**
 
 ```bash
-cd backend && npm run build && npm start
-cd frontend && npm run build
+cd backend && npm run build
+cd ../frontend && npm run build
 ```
 
-### Tests
+**Start backend with PM2:**
 
 ```bash
-cd backend  && npm test
-cd frontend && npm test
+pm2 start backend/dist/app.js --name openrace-backend
+pm2 save
+```
+
+**Serve frontend:** point your web server (Nginx, Caddy, etc.) at `frontend/dist/`.
+
+Example Nginx location block:
+
+```nginx
+location /api/ {
+    proxy_pass http://localhost:3000;
+    proxy_read_timeout 600;
+    proxy_connect_timeout 600;
+    proxy_send_timeout 600;
+}
+
+location / {
+    root /path/to/openrace/frontend/dist;
+    try_files $uri $uri/ /index.html;
+}
 ```
 
 ---
@@ -163,8 +223,6 @@ All API responses share a standard envelope:
 ```
 
 The backend drives frontend behaviour via `action_list` — navigation, toasts, DOM updates, config sync, i18n sync, and custom actions are all sent this way.
-
-For full architecture documentation see [instruction.md](./instruction.md).
 
 ---
 
