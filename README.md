@@ -92,16 +92,7 @@ git clone https://github.com/lingxiao10/openrace.git
 cd openrace
 ```
 
-### 2 — Database setup
-
-Create the database and run the schema:
-
-```bash
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS openrace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p openrace < backend/schema.sql
-```
-
-### 3 — Configuration
+### 2 — Configure
 
 Copy the template and fill in your credentials:
 
@@ -145,21 +136,37 @@ Edit `secret_json.json`:
 | `need_check_email` | optional | `true` to require email verification on registration (default: `false`) |
 | `admin_emails` | optional | List of emails that get admin access |
 
-### 4 — Install dependencies
+### 3 — Install dependencies
 
 ```bash
 cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 5 — Run DB migrations
+### 4 — Build the database
+
+One command creates the database (if it doesn't exist), applies `schema.sql`, and runs all pending migrations:
 
 ```bash
 cd backend
-npx ts-node src/migrate.ts
+npm run migrate
 ```
 
-### 6 — Development
+Expected output:
+
+```
+✅ Connected to database: openrace
+📄 Applying base schema (schema.sql)...
+   ✓ Base schema applied
+🔄 Running migrations (6 total)...
+   ⚠  add_doudizhu_support.sql (skipped — already exists)
+   ...
+🎉 Done — database is already up to date.
+```
+
+Re-running `npm run migrate` at any time is safe — already-applied migrations are skipped automatically.
+
+### 5 — Development
 
 ```bash
 # Backend (terminal 1)
@@ -171,7 +178,7 @@ cd frontend
 npm run dev        # http://localhost:5173
 ```
 
-### 7 — Production
+### 6 — Production
 
 **Build:**
 

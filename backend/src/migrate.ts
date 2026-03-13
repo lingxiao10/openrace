@@ -12,14 +12,20 @@ const MIGRATIONS_DIR = path.resolve(__dirname, "../migrations");
 const SCHEMA_FILE   = path.resolve(__dirname, "../schema.sql");
 
 async function run(): Promise<void> {
+  // Connect without specifying a database so we can create it if needed
   const conn = await mysql.createConnection({
-    host:     config.db.host,
-    port:     config.db.port,
-    user:     config.db.user,
-    password: config.db.password,
-    database: config.db.database,
+    host:               config.db.host,
+    port:               config.db.port,
+    user:               config.db.user,
+    password:           config.db.password,
     multipleStatements: true,
   });
+
+  // Auto-create the database
+  await conn.query(
+    `CREATE DATABASE IF NOT EXISTS \`${config.db.database}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
+  );
+  await conn.query(`USE \`${config.db.database}\``);
 
   console.log("✅ Connected to database:", config.db.database);
 

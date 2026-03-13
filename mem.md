@@ -21,15 +21,17 @@
 
 ### 启动方式
 ```bash
-# 1. 建库 + 迁移
-mysql -u root -p < backend/schema.sql
-mysql -u root -p < backend/migrations/add_doudizhu_support.sql
+# 1. 创建空库
+mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS openrace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 
-# 2. 后端
-cd backend && npm install && npm run dev
+# 2. 配置 secret_json.json（复制模板填写 DB 凭证）
 
-# 3. 前端
-cd frontend && npm install && npm run dev
+# 3. 建表 + 迁移（migrate.ts 自动应用 schema.sql + migrations/ 目录）
+cd backend && npm install && npm run migrate
+
+# 4. 启动
+cd backend && npm run dev        # http://localhost:3000
+cd frontend && npm install && npm run dev  # http://localhost:5173
 ```
 
 ### 关键配置（config.ts GameConfig）

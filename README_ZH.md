@@ -92,14 +92,7 @@ git clone https://github.com/lingxiao10/openrace.git
 cd openrace
 ```
 
-### 2 — 创建数据库
-
-```bash
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS openrace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
-mysql -u root -p openrace < backend/schema.sql
-```
-
-### 3 — 配置文件
+### 2 — 配置文件
 
 复制模板并填写实际信息：
 
@@ -143,19 +136,36 @@ cp secret_json_default.json secret_json.json
 | `need_check_email` | 可选 | `true` 开启注册邮箱验证（默认：`false`） |
 | `admin_emails` | 可选 | 拥有管理员权限的邮箱列表 |
 
-### 4 — 安装依赖
+### 3 — 安装依赖
 
 ```bash
 cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 5 — 运行数据库迁移
+### 5 — 构建数据库
+
+此命令一次完成全部工作：先应用 `schema.sql`（所有 `CREATE TABLE IF NOT EXISTS`，重复执行安全），再按顺序执行 `backend/migrations/` 下的所有迁移文件，并用 `_migrations` 表记录已执行的迁移。
 
 ```bash
 cd backend
-npx ts-node src/migrate.ts
+npm run migrate
 ```
+
+成功输出示例：
+
+```
+✅ Connected to database: openrace
+📄 Applying base schema (schema.sql)...
+   ✓ Base schema applied
+🔄 Running migrations (6 total)...
+   ✓  add_doudizhu_support.sql
+   ✓  add_error_count_to_robots.sql
+   ...
+🎉 Done — 6 migration(s) applied.
+```
+
+可随时重复执行 `npm run migrate`——已应用的迁移会自动跳过，不会重复执行。
 
 ### 6 — 开发模式启动
 
