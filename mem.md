@@ -21,18 +21,22 @@
 
 ### 启动方式
 ```bash
-# 1. 创建空库
-mysql -u root -p -e "CREATE DATABASE IF NOT EXISTS openrace CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+# 1. 配置 secret_json.json（复制模板填写 DB 凭证）
+cp secret_json_default.json secret_json.json
 
-# 2. 配置 secret_json.json（复制模板填写 DB 凭证）
-
-# 3. 建表 + 迁移（migrate.ts 自动应用 schema.sql + migrations/ 目录）
+# 2. 建表 + 迁移（migrate.ts 自动建库+应用 schema.sql+migrations/）
 cd backend && npm install && npm run migrate
 
-# 4. 启动
+# 3. 启动
 cd backend && npm run dev        # http://localhost:3000
 cd frontend && npm install && npm run dev  # http://localhost:5173
 ```
+
+### migrate.ts 关键设计
+- 连接时不指定数据库，先 `CREATE DATABASE IF NOT EXISTS`，再 `USE`
+- 读取 schema.sql（全量建表，IF NOT EXISTS 安全重跑）
+- 迁移文件里不能用 `ADD COLUMN IF NOT EXISTS`（MariaDB 语法，MySQL 不支持）
+- 应用 `ER_DUP_FIELDNAME` / `ER_DUP_KEYNAME` 错误自动跳过，达到幂等效果
 
 ### 关键配置（config.ts GameConfig）
 - `matchIntervalMs: 10000` — 匹配间隔（每10秒）

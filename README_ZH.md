@@ -143,9 +143,9 @@ cd backend && npm install
 cd ../frontend && npm install
 ```
 
-### 5 — 构建数据库
+### 4 — 构建数据库
 
-此命令一次完成全部工作：先应用 `schema.sql`（所有 `CREATE TABLE IF NOT EXISTS`，重复执行安全），再按顺序执行 `backend/migrations/` 下的所有迁移文件，并用 `_migrations` 表记录已执行的迁移。
+**一条命令**完成全部工作：自动创建数据库（不存在时）、应用 `schema.sql` 建表、按顺序执行所有迁移文件。`_migrations` 表记录已执行的迁移，重复运行安全。
 
 ```bash
 cd backend
@@ -159,15 +159,14 @@ npm run migrate
 📄 Applying base schema (schema.sql)...
    ✓ Base schema applied
 🔄 Running migrations (6 total)...
-   ✓  add_doudizhu_support.sql
-   ✓  add_error_count_to_robots.sql
+   ⚠  add_doudizhu_support.sql (skipped — already exists)
    ...
-🎉 Done — 6 migration(s) applied.
+🎉 Done — database is already up to date.
 ```
 
-可随时重复执行 `npm run migrate`——已应用的迁移会自动跳过，不会重复执行。
+可随时重复执行，已应用的迁移自动跳过。
 
-### 6 — 开发模式启动
+### 5 — 开发模式启动
 
 ```bash
 # 后端（终端 1）
@@ -179,7 +178,7 @@ cd frontend
 npm run dev        # http://localhost:5173
 ```
 
-### 7 — 生产部署
+### 6 — 生产部署
 
 **编译：**
 
