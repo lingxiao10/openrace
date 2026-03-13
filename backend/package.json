@@ -2,6 +2,7 @@
   "name": "backend",
   "version": "1.0.0",
   "scripts": {
+    "migrate": "ts-node src/migrate.ts",
     "dev": "ts-node-dev --respawn src/app.ts",
     "build": "tsc",
     "start": "node dist/app.js",
