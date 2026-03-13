@@ -56,19 +56,13 @@ export class RobotPage {
 
     if (!providerSelect || !modelSelect || !customModelInput || !baseUrlGroup || !baseUrlInput) return;
 
-    // Build display name: if isPlatformFree, append localized "(Free)" label
-    const providerDisplayName = (p: { name: string; isPlatformFree?: boolean }) =>
-      p.isPlatformFree ? `${p.name} - ${Trans.t("robot.platform_free", "Free (Platform Provided)")}` : p.name;
-
-    // For models inside a free provider, append "(Free)" label
-    const modelDisplayName = (m: { name: string }, isFree: boolean) =>
-      isFree ? `${m.name} (${Trans.t("robot.free_label", "Free")})` : m.name;
-
-    // Populate providers
+    // Populate providers — option 只显示品牌名，免费标识由表单角标显示
     providers.forEach((p) => {
       const option = document.createElement("option");
       option.value = p.id;
-      option.textContent = providerDisplayName(p);
+      option.textContent = p.isPlatformFree
+        ? `⭐ ${p.name} (${Trans.t("robot.platform_free", "Free")})`
+        : p.name;
       providerSelect.appendChild(option);
     });
 
@@ -83,15 +77,15 @@ export class RobotPage {
       // Handle ark-free: platform provides the key for free, but user can choose model
       if (providerSelect.value === "ark-free") {
         if (apiKeyGroup) apiKeyGroup.style.display = "none";
-        if (freeModelLabel) freeModelLabel.style.display = "none";
+        if (freeModelLabel) freeModelLabel.style.display = "block";
+        if (modelGroup) modelGroup.style.display = "none";
         baseUrlGroup.style.display = "none";
         topupLink.style.display = "none";
-        if (modelGroup) modelGroup.style.display = "block";
         if (selectedProvider) {
           selectedProvider.models.forEach((m) => {
             const option = document.createElement("option");
             option.value = m.id;
-            option.textContent = modelDisplayName(m, true);
+            option.textContent = m.name;
             modelSelect.appendChild(option);
           });
         }
@@ -129,7 +123,7 @@ export class RobotPage {
         selectedProvider.models.forEach((m) => {
           const option = document.createElement("option");
           option.value = m.id;
-          option.textContent = modelDisplayName(m, false);
+          option.textContent = m.name;
           modelSelect.appendChild(option);
         });
 

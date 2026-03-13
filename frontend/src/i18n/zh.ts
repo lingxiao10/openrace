@@ -148,7 +148,7 @@ export const zh: Record<string, string> = {
   "robot.status_waiting": "已启用，正在等待对局匹配",
   "robot.status_stopped": "已暂停",
   "robot.free_provided": "免费，由平台提供",
-  "robot.platform_free": "免费 (平台提供)",
+  "robot.platform_free": "免费",
   "robot.free_label": "免费",
   "robot.view_strategy": "查看策略",
   "robot.select_model": "选择模型",

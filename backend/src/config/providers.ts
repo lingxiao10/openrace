@@ -35,7 +35,7 @@ export const PROVIDERS: Provider[] = [
   },
   {
     id: "ark",
-    name: "Ark (火山引擎)",
+    name: "Ark",
     baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
     requiresApiKey: true,
     supportsCustomModel: false,

@@ -148,7 +148,7 @@ export const en: Record<string, string> = {
   "robot.status_waiting": "Enabled, Waiting for Match",
   "robot.status_stopped": "Suspended",
   "robot.free_provided": "Free, provided by platform",
-  "robot.platform_free": "Free (Platform Provided)",
+  "robot.platform_free": "Free",
   "robot.free_label": "Free",
   "robot.view_strategy": "View Strategy",
   "robot.select_model": "Select Model",
