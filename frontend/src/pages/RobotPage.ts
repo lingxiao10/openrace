@@ -442,7 +442,7 @@ export class RobotPage {
     </div>
 
     ${r.strategy ? `<div class="robot-strategy-wrapper">
-      <button class="btn-strategy-toggle" data-id="${r.id}" title="查看策略">🔒</button>
+      <button class="btn-strategy-toggle" data-id="${r.id}" title="${Trans.t("robot.view_strategy", "查看策略")}">🔒</button>
       <div class="robot-strategy-preview" id="strategy-${r.id}" style="display:none">"${(r.strategy as string).slice(0, 80)}${(r.strategy as string).length > 80 ? '...' : ''}"</div>
     </div>` : ''}
     <div class="robot-status-row ${statusClass}">${statusText}</div>

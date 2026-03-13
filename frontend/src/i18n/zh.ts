@@ -147,6 +147,10 @@ export const zh: Record<string, string> = {
   "robot.status_in_game": "对局中",
   "robot.status_waiting": "已启用，正在等待对局匹配",
   "robot.status_stopped": "已暂停",
+  "robot.free_provided": "免费，由平台提供",
+  "robot.view_strategy": "查看策略",
+  "robot.select_model": "选择模型",
+  "robot.custom_model_placeholder": "输入自定义模型名称",
 
   // 对局
   "game.move_history": "走棋历史",

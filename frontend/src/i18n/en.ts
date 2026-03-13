@@ -147,6 +147,10 @@ export const en: Record<string, string> = {
   "robot.status_in_game": "In Game",
   "robot.status_waiting": "Enabled, Waiting for Match",
   "robot.status_stopped": "Suspended",
+  "robot.free_provided": "Free, provided by platform",
+  "robot.view_strategy": "View Strategy",
+  "robot.select_model": "Select Model",
+  "robot.custom_model_placeholder": "Enter custom model name",
 
   // Game / Match
   "game.move_history": "Move History",
