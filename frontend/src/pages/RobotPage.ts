@@ -38,7 +38,7 @@ export class RobotPage {
   };
 
   private populateProviders(): void {
-    const providers = (window as any).__sync_providers as Array<{ id: string; name: string; nameEn?: string; isPlatformFree?: boolean; models: Array<{ id: string; name: string; nameEn?: string }>; topUpUrl?: string; supportsCustomModel?: boolean }> | undefined;
+    const providers = (window as any).__sync_providers as Array<{ id: string; name: string; isPlatformFree?: boolean; models: Array<{ id: string; name: string }>; topUpUrl?: string; supportsCustomModel?: boolean }> | undefined;
     if (!providers || !Array.isArray(providers)) {
       console.warn("Providers not loaded yet");
       return;
@@ -56,14 +56,19 @@ export class RobotPage {
 
     if (!providerSelect || !modelSelect || !customModelInput || !baseUrlGroup || !baseUrlInput) return;
 
-    const pName = (p: { name: string; nameEn?: string }) =>
-      Trans.getLang() === "en" && p.nameEn ? p.nameEn : p.name;
+    // Build display name: if isPlatformFree, append localized "(Free)" label
+    const providerDisplayName = (p: { name: string; isPlatformFree?: boolean }) =>
+      p.isPlatformFree ? `${p.name} - ${Trans.t("robot.platform_free", "Free (Platform Provided)")}` : p.name;
+
+    // For models inside a free provider, append "(Free)" label
+    const modelDisplayName = (m: { name: string }, isFree: boolean) =>
+      isFree ? `${m.name} (${Trans.t("robot.free_label", "Free")})` : m.name;
 
     // Populate providers
     providers.forEach((p) => {
       const option = document.createElement("option");
       option.value = p.id;
-      option.textContent = pName(p);
+      option.textContent = providerDisplayName(p);
       providerSelect.appendChild(option);
     });
 
@@ -86,7 +91,7 @@ export class RobotPage {
           selectedProvider.models.forEach((m) => {
             const option = document.createElement("option");
             option.value = m.id;
-            option.textContent = pName(m);
+            option.textContent = modelDisplayName(m, true);
             modelSelect.appendChild(option);
           });
         }
@@ -124,7 +129,7 @@ export class RobotPage {
         selectedProvider.models.forEach((m) => {
           const option = document.createElement("option");
           option.value = m.id;
-          option.textContent = pName(m);
+          option.textContent = modelDisplayName(m, false);
           modelSelect.appendChild(option);
         });
 

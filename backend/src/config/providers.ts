@@ -5,7 +5,6 @@
 export interface ProviderModel {
   id: string;
   name: string;
-  nameEn?: string;
   contextWindow?: number;
   maxTokens?: number;
 }
@@ -13,7 +12,6 @@ export interface ProviderModel {
 export interface Provider {
   id: string;
   name: string;
-  nameEn?: string;
   baseUrl: string;
   requiresApiKey: boolean;
   supportsCustomModel: boolean;
@@ -25,15 +23,14 @@ export interface Provider {
 export const PROVIDERS: Provider[] = [
   {
     id: "ark-free",
-    name: "Ark 免费 (平台提供)",
-    nameEn: "Ark Free (Platform Provided)",
+    name: "Ark Free",
     baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
     requiresApiKey: false,
     supportsCustomModel: false,
     isPlatformFree: true,
     models: [
-      { id: "deepseek-v3-2-251201", name: "DeepSeek V3 (免费)", nameEn: "DeepSeek V3 (Free)" },
-      { id: "doubao-seed-1-8-251228", name: "Doubao Seed 1.8 (免费)", nameEn: "Doubao Seed 1.8 (Free)" },
+      { id: "deepseek-v3-2-251201", name: "DeepSeek V3" },
+      { id: "doubao-seed-1-8-251228", name: "Doubao Seed 1.8" },
     ],
   },
   {
