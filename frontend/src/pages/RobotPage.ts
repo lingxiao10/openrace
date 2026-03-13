@@ -38,7 +38,7 @@ export class RobotPage {
   };
 
   private populateProviders(): void {
-    const providers = (window as any).__sync_providers as Array<{ id: string; name: string; isPlatformFree?: boolean; models: Array<{ id: string; name: string }>; topUpUrl?: string; supportsCustomModel?: boolean }> | undefined;
+    const providers = (window as any).__sync_providers as Array<{ id: string; name: string; nameEn?: string; isPlatformFree?: boolean; models: Array<{ id: string; name: string; nameEn?: string }>; topUpUrl?: string; supportsCustomModel?: boolean }> | undefined;
     if (!providers || !Array.isArray(providers)) {
       console.warn("Providers not loaded yet");
       return;
@@ -56,11 +56,14 @@ export class RobotPage {
 
     if (!providerSelect || !modelSelect || !customModelInput || !baseUrlGroup || !baseUrlInput) return;
 
+    const pName = (p: { name: string; nameEn?: string }) =>
+      Trans.getLang() === "en" && p.nameEn ? p.nameEn : p.name;
+
     // Populate providers
     providers.forEach((p) => {
       const option = document.createElement("option");
       option.value = p.id;
-      option.textContent = p.name;
+      option.textContent = pName(p);
       providerSelect.appendChild(option);
     });
 
@@ -83,7 +86,7 @@ export class RobotPage {
           selectedProvider.models.forEach((m) => {
             const option = document.createElement("option");
             option.value = m.id;
-            option.textContent = m.name;
+            option.textContent = pName(m);
             modelSelect.appendChild(option);
           });
         }
@@ -121,7 +124,7 @@ export class RobotPage {
         selectedProvider.models.forEach((m) => {
           const option = document.createElement("option");
           option.value = m.id;
-          option.textContent = m.name;
+          option.textContent = pName(m);
           modelSelect.appendChild(option);
         });
 
