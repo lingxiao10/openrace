@@ -398,6 +398,12 @@ cd frontend && npm install && npm run dev  # http://localhost:5173
 - **修复**：将 LIMIT/OFFSET 直接嵌入 SQL 模板字符串（`LIMIT ${limitInt} OFFSET ${offsetInt}`），值经 `Math.trunc()` 保证为整数，无注入风险
 - **涉及文件**：`AdminService.ts`（两处查询）、`AdminController.ts`（增加错误日志）
 
+### Provider 国际化原则（2026-03-13）
+- **不在后端 name 字段写中文**，name 统一用英文（如 "Ark Free"）
+- **isPlatformFree 标志**：前端根据此字段拼接本地化标签，而非靠 name 字段
+- 翻译键：`robot.platform_free`（zh: "免费 (平台提供)"）、`robot.free_label`（zh: "免费"）
+- `providerDisplayName()` / `modelDisplayName()` 在 RobotPage.ts 内处理显示名
+
 ### Ark（火山引擎）Provider + 平台免费选项（2026-03-13）
 - `secret_json.json` 新增 `ark_api_key`（平台 key）
 - `config.ts` 新增 `platformArkApiKey` + `arkBaseUrl`（`https://ark.cn-beijing.volces.com/api/v3`）
