@@ -449,6 +449,13 @@ export class AppLogic {
   }
 
   private static getStoredLang(): string {
+    // URL 参数优先级最高（?lang=zh 或 ?lang=en）
+    const urlLang = new URLSearchParams(window.location.search).get("lang");
+    if (urlLang === "zh" || urlLang === "en") {
+      StorageTool.set("lang", urlLang);
+      return urlLang;
+    }
+
     const stored = StorageTool.get<string>("lang");
     if (stored) return stored;
 

@@ -276,6 +276,7 @@ cd frontend && npm install && npm run dev  # http://localhost:5173
 
 ### 浏览器语言自动检测（2026-03-09）
 - `AppLogic.getStoredLang()` 增加浏览器语言检测：localStorage 无语言时，读取 `navigator.language`，zh开头→中文，en开头→英文，默认中文
+- URL 参数 `?lang=zh` / `?lang=en` 优先级最高，会写入 localStorage 持久化
 
 ### 根据语言自动选择默认游戏类型（2026-03-09）
 - `RobotPage.renderSkeleton()` 根据当前语言设置默认游戏类型：中文→斗地主，英文/其他→国际象棋
