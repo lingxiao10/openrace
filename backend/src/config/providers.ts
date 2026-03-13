@@ -23,7 +23,7 @@ export interface Provider {
 export const PROVIDERS: Provider[] = [
   {
     id: "ark-free",
-    name: "Ark Free",
+    name: "Ark",
     baseUrl: "https://ark.cn-beijing.volces.com/api/v3",
     requiresApiKey: false,
     supportsCustomModel: false,
